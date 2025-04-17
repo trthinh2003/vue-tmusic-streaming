@@ -102,7 +102,7 @@ const handleLogin = handleSubmit(async (values) => {
         const errorMessage = error.response?.data?.message || "Đã xảy ra lỗi!";
         message.error(errorMessage);
     } finally {
-        loading.value = false;
+        loading.value = true;
     }
 });
 </script>

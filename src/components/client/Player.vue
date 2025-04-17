@@ -1,9 +1,13 @@
 <template>
     <div class="player">
-        <div class="song-info">
-            <img :src="currentSong.cover" alt="Album cover" class="album-cover">
-            <h2>{{ currentSong.title }}</h2>
-            <p>{{ currentSong.artist }}</p>
+        <div class="disc-container">
+            <div class="disc" :class="{ 'is-playing': isPlaying }">
+                <img :src="currentSong.cover" alt="Album cover" class="album-cover" />
+            </div>
+            <div class="song-info">
+                <h2>{{ currentSong.title }}</h2>
+                <p>{{ currentSong.artist }}</p>
+            </div>
         </div>
 
         <div class="progress-container">
@@ -28,7 +32,7 @@
             </button>
 
             <button @click="$emit('toggle-play')" class="play-pause" title="Phát/Tạm dừng">
-                {{ isPlaying ? '⏸' : '⏵' }}
+              <i :class="isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i>
             </button>
 
             <button @click="seekForward" title="Tới 10 giây">
@@ -45,14 +49,20 @@
         </div>
 
         <div class="volume-control">
-            <span class="volume-icon">🔊</span>
+            <span class="volume-icon"><i class="fa-solid fa-volume-high"></i></span>
             <input type="range" min="0" max="1" step="0.01" v-model="volume" @input="changeVolume"
                 class="volume-slider">
             <span class="volume-percent">{{ Math.round(volume * 100) }}%</span>
         </div>
 
-        <audio ref="audioPlayer" :src="currentSong.audio" @ended="handleSongEnd" @timeupdate="updateProgress"
-            @loadedmetadata="updateDuration" @volumechange="updateVolume"></audio>
+        <audio 
+          ref="audioPlayer" 
+          :src="currentSong.audio" 
+          @ended="handleSongEnd" 
+          @timeupdate="updateProgress"
+          @loadedmetadata="updateDuration" 
+          @volumechange="updateVolume">
+        </audio>
     </div>
 </template>
 
@@ -203,37 +213,98 @@ watch(() => props.currentSong, () => {
 <style scoped>
 .player {
     text-align: center;
-    padding: 20px;
-    width: 100%;
+    padding: 23px;
     max-width: 600px;
     margin: 0 auto;
-    background: #fff;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    background: rgba(30, 30, 46, 0.8);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.disc-container {
+    position: relative;
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.disc {
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 
+        0 0 0 8px rgba(67, 97, 238, 0.2),
+        0 0 30px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.disc::before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    z-index: 2;
+    box-shadow: inset 0 0 0 2px #4cc9f0;
+}
+
+.disc::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #4cc9f0;
+    z-index: 3;
+}
+
+.disc.is-playing {
+    animation: rotate 20s linear infinite;
 }
 
 .album-cover {
-    width: 250px;
-    height: 250px;
-    border-radius: 10px;
-    margin-bottom: 20px;
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
     object-fit: cover;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
-.album-cover:hover {
-    transform: scale(1.02);
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.song-info {
+    text-align: center;
+    margin-top: 15px;
 }
 
 .song-info h2 {
     margin: 10px 0 5px;
     font-size: 1.5rem;
-    color: #333;
+    color: #f8f9fa;
 }
 
 .song-info p {
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
     margin-bottom: 20px;
     font-size: 1.1rem;
 }
@@ -247,7 +318,7 @@ watch(() => props.currentSong, () => {
 .progress-bar {
     flex: 1;
     height: 6px;
-    background: #e0e0e0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     cursor: pointer;
     margin: 0 15px;
@@ -261,14 +332,14 @@ watch(() => props.currentSong, () => {
 
 .progress {
     height: 100%;
-    background: #42b983;
+    background: #4cc9f0;
     border-radius: 3px;
     transition: width 0.1s linear;
 }
 
 .time {
     font-size: 0.9rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.6);
     min-width: 40px;
 }
 
@@ -282,9 +353,9 @@ watch(() => props.currentSong, () => {
 }
 
 .controls button {
-    background: #f5f5f5;
-    color: #333;
-    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8f9fa;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
     width: 50px;
     height: 50px;
@@ -298,8 +369,7 @@ watch(() => props.currentSong, () => {
 }
 
 .controls button:hover {
-    background: #42b983;
-    color: white;
+    background: rgba(67, 97, 238, 0.3);
     transform: scale(1.05);
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
@@ -309,7 +379,7 @@ watch(() => props.currentSong, () => {
 }
 
 .controls button.active {
-    background: #42b983;
+    background: #4361ee;
     color: white;
 }
 
@@ -317,8 +387,10 @@ watch(() => props.currentSong, () => {
     width: 60px !important;
     height: 60px !important;
     font-size: 24px !important;
-    background: #42b983 !important;
+    background: #4361ee !important;
     color: white !important;
+    border: none !important;
+    box-shadow: 0 0 15px rgba(67, 97, 238, 0.5);
 }
 
 .volume-control {
@@ -327,18 +399,22 @@ watch(() => props.currentSong, () => {
     justify-content: center;
     margin-top: 20px;
     gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 15px;
+    border-radius: 20px;
 }
 
 .volume-icon {
     font-size: 1.2rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .volume-slider {
     width: 100px;
     height: 6px;
-    --webkit-appearance: none;
-    background: #e0e0e0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     outline: none;
     cursor: pointer;
@@ -348,37 +424,52 @@ watch(() => props.currentSong, () => {
     -webkit-appearance: none;
     width: 15px;
     height: 15px;
-    background: #42b983;
+    background: #4cc9f0;
     border-radius: 50%;
     cursor: pointer;
+    box-shadow: 0 0 5px rgba(76, 201, 240, 0.5);
 }
 
 .volume-percent {
     font-size: 0.9rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.6);
     min-width: 40px;
     text-align: left;
 }
 
-@media (max-width: 600px) {
-    .album-cover {
+@media (max-width: 576px) {
+    div.player {
+        margin-top: 10px;
+        padding: 30px;
+    }
+    
+    .disc {
         width: 200px;
         height: 200px;
     }
-
-    .controls {
-        gap: 5px;
+    
+    .album-cover {
+        width: 65%;
+        height: 65%;
     }
 
     .controls button {
-        width: 45px;
-        height: 45px;
-        font-size: 18px;
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
     }
 
     .play-pause {
-        width: 55px !important;
-        height: 55px !important;
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .song-info h2 {
+        font-size: 1.3rem;
+    }
+    
+    .song-info p {
+        font-size: 1rem;
     }
 }
 </style>

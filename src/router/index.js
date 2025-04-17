@@ -15,6 +15,12 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const profileStore = useProfileStore();
 
+  if (to.meta.title) {
+    document.title = to.meta.title;
+  } else {
+    document.title = 'TMusic Streaming';
+  }
+
   if (!to.meta.requiresAuth) {
     return next();
   }

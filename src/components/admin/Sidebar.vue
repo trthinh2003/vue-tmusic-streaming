@@ -59,7 +59,7 @@
             </div>
 
             <!-- Statistics Section -->
-            <div class="menu-section">
+            <!-- <div class="menu-section">
                 <div class="section-title" @click="toggleSection('stats')">
                     <span>Thống kê</span>
                     <i class="fas" :class="openSections.stats ? 'fa-angle-up' : 'fa-angle-down'"></i>
@@ -78,7 +78,7 @@
                         </router-link>
                     </li>
                 </ul>
-            </div>
+            </div> -->
 
             <!-- Community Section -->
             <div class="menu-section">
@@ -115,20 +115,26 @@
                             <span>Tài khoản</span>
                         </router-link>
                     </li>
-                    <li class="menu-item" :class="{ 'active': $route.path.startsWith('/admin/settings') }">
+                    <!-- <li class="menu-item" :class="{ 'active': $route.path.startsWith('/admin/settings') }">
                         <router-link to="/admin/settings">
                             <i class="fas fa-cog"></i>
                             <span>Cài đặt</span>
                         </router-link>
-                    </li>
+                    </li> -->
                 </ul>
             </div>
         </div>
 
         <div class="sidebar-footer">
-            <button class="logout-btn" @click="handleLogout">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Đăng xuất</span>
+            <button class="logout-btn" @click="handleLogout" :disabled="loading">
+                <span v-if="!loading">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Đăng xuất</span>
+                </span>
+                <span v-else>
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Đang đăng xuất...</span>
+                </span>
             </button>
         </div>
     </nav>
@@ -137,9 +143,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import axiosInstance from '@/configs/axios';
+import { useRouter } from 'vue-router';
 
 const route = useRoute();
 const emit = defineEmits(['close']);
+const loading = ref(false);
+const router = useRouter();
 
 const openSections = ref({
     dashboard: true,
@@ -158,8 +168,20 @@ const closeSidebar = () => {
     emit('close');
 };
 
-const handleLogout = () => {
+const handleLogout = async() => {
     console.log('Logging out...');
+    try {
+        loading.value = true;
+        const response = await axiosInstance.get('/auth/logout');
+        console.log(response.data.message);
+        setTimeout(() => { 
+            router.push({ name: 'login' }); 
+        }, 1000);
+    } catch (error) {
+        console.error("Logout error:", error);
+    } finally {
+        loading.value = true;
+    }
 };
 
 onMounted(() => {

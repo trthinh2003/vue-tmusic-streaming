@@ -5,7 +5,7 @@
             <h3>{{ song.title }}</h3>
             <p class="text-white">{{ song.artist }}</p>
         </div>
-        <span class="duration">{{ song.duration }}</span>
+        <span class="duration text-white">{{ song.duration }}</span>
     </li>
 </template>
 
@@ -23,8 +23,8 @@ export default {
 .song-item {
     display: flex;
     align-items: center;
-    padding: 10px;
-    margin: 5px 0 0 -45px;
+    padding: 3px;
+    margin: 5px 0 0 -40px;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s;

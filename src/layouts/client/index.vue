@@ -39,6 +39,7 @@
             @search="handleSearch"
           />
         </div>
+
         <div class="advance-filter d-flex align-items-center justify-content-center">
           <a-button 
             type="text" 
@@ -51,6 +52,19 @@
             </template>
           </a-button>
         </div>
+        <!-- Filter tags cho desktop -->
+        <div class="filter-tags p-2" v-if="hasActiveFilters">
+          <a-tag
+            v-for="(value, key) in activeFilters"
+            :key="key"
+            closable
+            @close="removeFilter(key)"
+            class="mx-1 my-1"
+          >
+            {{ getFilterLabel(key) }}: {{ $truncateWords(value, 5) }}
+          </a-tag>
+        </div>
+
         <playlist 
           :songs="filteredSongs" 
           :current-song="currentSong"
@@ -84,6 +98,20 @@
           </template>
         </a-button>
       </div>
+
+      <!-- Filter tags cho desktop -->
+      <div class="filter-tags p-2" v-if="hasActiveFilters">
+        <a-tag
+          v-for="(value, key) in activeFilters"
+          :key="key"
+          closable
+          @close="removeFilter(key)"
+          class="mx-1 my-1"
+        >
+          {{ getFilterLabel(key) }}: {{ value }}
+        </a-tag>
+      </div>
+
       <playlist 
         :songs="filteredSongs" 
         :current-song="currentSong"
@@ -120,36 +148,20 @@
       </div>
     </div>
   </div>
-  <div class="filter-container">
-    <a-modal v-model:open="visibleModalFilter" title="Bộ lọc bài hát" class="dark-modal" @ok="applyFilter">
-      <a-form layout="vertical">
-        <a-form-item label="Tên bài hát">
-          <a-input v-model:value="filters.songName" placeholder="Nhập tên bài hát" />
-        </a-form-item>
-        <a-form-item label="Tên nghệ sĩ">
-          <a-input v-model:value="filters.artistName" placeholder="Nhập tên nghệ sĩ" />
-        </a-form-item>
-        <a-form-item label="Thể loại">
-          <a-select v-model:value="filters.genre" placeholder="Chọn thể loại" allowClear>
-            <a-select-option value="pop">Pop</a-select-option>
-            <a-select-option value="rock">Rock</a-select-option>
-            <a-select-option value="jazz">Jazz</a-select-option>
-            <a-select-option value="hiphop">Hip Hop</a-select-option>
-          </a-select>
-        </a-form-item>
-      </a-form>
-      <template #footer>
-        <a-button class="close-button" @click="visible = false">Đóng</a-button>
-        <a-button type="primary" class="apply-button" @click="applyFilter">Áp dụng</a-button>
-      </template>
-    </a-modal>
-  </div>
+  <FilterModal 
+    v-model:open="visibleModalFilter"
+    v-model:filters="filters"
+    @apply-filter="applyFilter"
+    @update:filters="updateFilters"
+    @update:modelValue="visibleModalFilter = false"
+  />
 </template>
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
+import FilterModal from '@/components/client/FilterModal.vue'
 import { Button, Drawer, Input } from 'ant-design-vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
@@ -168,11 +180,11 @@ import song4 from '@/assets/client/songs/song4.mp3'
 import song5 from '@/assets/client/songs/song5.mp3'
 
 const originalPlaylist = [
-  { id: 1, title: "Bài hát 1", artist: "Nghệ sĩ A", cover: cover1, audio: song1, duration: '2:01' },
-  { id: 2, title: "Bài hát 2", artist: "Nghệ sĩ B", cover: cover2, audio: song2, duration: '3:50' },
-  { id: 3, title: "Bài hát 3", artist: "Nghệ sĩ C", cover: cover3, audio: song3, duration: '3:49' },
-  { id: 4, title: "Bài hát 4", artist: "Nghệ sĩ D", cover: cover4, audio: song4, duration: '1:48' },
-  { id: 5, title: "Bài hát 5", artist: "Nghệ sĩ E", cover: cover5, audio: song5, duration: '4:32' }
+  { id: 1, title: "Bài hát 1", artist: "Nghệ sĩ A", genre: "Pop", cover: cover1, audio: song1, duration: '2:01' },
+  { id: 2, title: "Bài hát 2", artist: "Nghệ sĩ B", genre: "Jazz", cover: cover2, audio: song2, duration: '3:50' },
+  { id: 3, title: "Bài hát 3", artist: "Nghệ sĩ C", genre: "Pop", cover: cover3, audio: song3, duration: '3:49' },
+  { id: 4, title: "Bài hát 4", artist: "Nghệ sĩ D", genre: "Pop", cover: cover4, audio: song4, duration: '1:48' },
+  { id: 5, title: "Bài hát 4", artist: "Nghệ sĩ E", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32' }
 ]
 
 const songs = ref([...originalPlaylist])
@@ -187,9 +199,62 @@ const visibleModalFilter = ref(false);
 const filters = ref({ songName: '', artistName: '', genre: '' });
 
 const applyFilter = () => {
-  console.log('Áp dụng bộ lọc:', filters.value);
-  visibleModalFilter.value = false;
+  // Nếu không có bộ lọc nào, khôi phục danh sách gốc
+  if (!hasActiveFilters.value) {
+    songs.value = [...originalPlaylist];
+    return;
+  }
+
+  // Áp dụng bộ lọc
+  songs.value = originalPlaylist.filter(song => {
+    const matchesSongName = filters.value.songName 
+      ? song.title.toLowerCase().includes(filters.value.songName.toLowerCase())
+      : true;
+    
+    const matchesArtistName = filters.value.artistName 
+      ? song.artist.toLowerCase().includes(filters.value.artistName.toLowerCase())
+      : true;
+    
+    const matchesGenre = filters.value.genre 
+      ? song.genre.toLowerCase().includes(filters.value.genre.toLowerCase())
+      : true;
+    
+    return matchesSongName && matchesArtistName && matchesGenre;
+  });
 };
+
+/**************** Tags ****************/
+// Computed property để kiểm tra có bộ lọc đang hoạt động không
+const hasActiveFilters = computed(() => {
+  return Object.values(filters.value).some(val => val !== '');
+});
+
+// Computed property để lọc ra các bộ lọc đang được áp dụng
+const activeFilters = computed(() => {
+  return Object.fromEntries(
+    Object.entries(filters.value).filter(([_, value]) => value !== '')
+  );
+});
+
+// Method để xóa từng bộ lọc
+const removeFilter = (filterKey) => {
+  filters.value[filterKey] = '';
+  applyFilter(); // Áp dụng lại bộ lọc sau khi xóa
+};
+
+// Method để hiển thị label cho từng loại filter
+const getFilterLabel = (key) => {
+  const labels = {
+    songName: 'Tên bài hát',
+    artistName: 'Nghệ sĩ',
+    genre: 'Thể loại'
+  };
+  return labels[key] || key;
+};
+
+const updateFilters = (newFilters) => {
+  filters.value = newFilters;
+}
 
 // Lọc bài hát theo từ khóa
 const filteredSongs = computed(() => {
@@ -197,7 +262,8 @@ const filteredSongs = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return songs.value.filter(song => 
     song.title.toLowerCase().includes(query) || 
-    song.artist.toLowerCase().includes(query)
+    song.artist.toLowerCase().includes(query) ||
+    song.genre.toLowerCase().includes(query)
   )
 })
 
@@ -205,11 +271,9 @@ const showDrawer = () => {
   visible.value = true
 }
 
-// Xử lý tìm kiếm
 const handleSearch = () => {
-  // Đã được xử lý tự động thông qua computed filteredSongs
   if (showMobileSearch.value) {
-    showMobileSearch.value = false // Đóng thanh tìm kiếm mobile sau khi search
+    showMobileSearch.value = false
   }
 }
 
@@ -349,58 +413,22 @@ const handleLogout = async () => {
   text-align: center;
 }
 
-/* Filter Modal */
-.filter-container {
-  display: flex;
-  justify-content: center;
-  padding: 10px;
+/* Filter Tags */
+.filter-tags {
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 8px;
+  margin: 8px;
 }
 
-.filter-button {
-  background-color: #1f1f1f;
+.ant-tag {
+  background: var(--primary-color);
+  color: white;
   border: none;
-  color: #fff;
-  transition: background 0.3s;
 }
 
-.filter-button:hover {
-  background-color: #333;
-}
-
-.dark-modal :deep(.ant-modal-content) {
-  background: #1e1e1e;
+.ant-tag-close-icon {
   color: white;
-}
-
-.dark-modal :deep(.ant-modal-header) {
-  background: #252525;
-  border-bottom: 1px solid #444;
-  color: white;
-}
-
-.dark-modal :deep(.ant-modal-footer) {
-  background: #252525;
-  border-top: 1px solid #444;
-}
-
-.close-button {
-  background: #444;
-  border: none;
-  color: white;
-}
-
-.close-button:hover {
-  background: #666;
-}
-
-.apply-button {
-  background: #007bff;
-  border: none;
-  color: white;
-}
-
-.apply-button:hover {
-  background: #0056b3;
+  margin-left: 4px;
 }
 
 /* Search Input */
@@ -540,7 +568,6 @@ const handleLogout = async () => {
 
   .anticon svg {
     display: inline-block;
-    color: var(--primary-color);
   }
 
   .ant-input-search-button {

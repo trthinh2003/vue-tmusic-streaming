@@ -51,7 +51,7 @@
 <script>
 import { defineComponent, ref } from 'vue';
 import axiosInstance from '@/configs/axios';
-import UseModal from '@/components/admin/artists/UseModal.vue';
+// import UseModal from '@/components/admin/artists/UseModal.vue';
 
 export default defineComponent({
     setup() {

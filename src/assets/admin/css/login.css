@@ -250,9 +250,9 @@
 }
 
 /* Responsive */
-@media (max-width: 480px) {
+@media (max-width: 576px) {
     .login-box {
-        padding: 30px 20px;
+        padding: 11px 11px;
     }
 
     .logo {

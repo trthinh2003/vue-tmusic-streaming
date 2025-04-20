@@ -84,6 +84,32 @@
           </template>
         </a-button>
       </div>
+
+      <div class="filter-container">
+        <a-modal v-model:open="visibleModalFilter" title="Bộ lọc bài hát" class="dark-modal" @ok="applyFilter">
+          <a-form layout="vertical">
+            <a-form-item label="Tên bài hát">
+              <a-input v-model:value="filters.songName" placeholder="Nhập tên bài hát" />
+            </a-form-item>
+            <a-form-item label="Tên nghệ sĩ">
+              <a-input v-model:value="filters.artistName" placeholder="Nhập tên nghệ sĩ" />
+            </a-form-item>
+            <a-form-item label="Thể loại">
+              <a-select v-model:value="filters.genre" placeholder="Chọn thể loại" allowClear>
+                <a-select-option value="pop">Pop</a-select-option>
+                <a-select-option value="rock">Rock</a-select-option>
+                <a-select-option value="jazz">Jazz</a-select-option>
+                <a-select-option value="hiphop">Hip Hop</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-form>
+          <template #footer>
+            <a-button class="close-button" @click="visible = false">Đóng</a-button>
+            <a-button type="primary" class="apply-button" @click="applyFilter">Áp dụng</a-button>
+          </template>
+        </a-modal>
+      </div>
+
       <playlist 
         :songs="filteredSongs" 
         :current-song="currentSong"
@@ -119,30 +145,6 @@
         />
       </div>
     </div>
-  </div>
-  <div class="filter-container">
-    <a-modal v-model:open="visibleModalFilter" title="Bộ lọc bài hát" class="dark-modal" @ok="applyFilter">
-      <a-form layout="vertical">
-        <a-form-item label="Tên bài hát">
-          <a-input v-model:value="filters.songName" placeholder="Nhập tên bài hát" />
-        </a-form-item>
-        <a-form-item label="Tên nghệ sĩ">
-          <a-input v-model:value="filters.artistName" placeholder="Nhập tên nghệ sĩ" />
-        </a-form-item>
-        <a-form-item label="Thể loại">
-          <a-select v-model:value="filters.genre" placeholder="Chọn thể loại" allowClear>
-            <a-select-option value="pop">Pop</a-select-option>
-            <a-select-option value="rock">Rock</a-select-option>
-            <a-select-option value="jazz">Jazz</a-select-option>
-            <a-select-option value="hiphop">Hip Hop</a-select-option>
-          </a-select>
-        </a-form-item>
-      </a-form>
-      <template #footer>
-        <a-button class="close-button" @click="visible = false">Đóng</a-button>
-        <a-button type="primary" class="apply-button" @click="applyFilter">Áp dụng</a-button>
-      </template>
-    </a-modal>
   </div>
 </template>
 
@@ -335,7 +337,7 @@ const handleLogout = async () => {
   background: rgba(26, 26, 46, 0.9);
   backdrop-filter: blur(10px);
   color: var(--text-light);
-  overflow-y: auto;
+  overflow-y: hidden;
   padding: 20px;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
@@ -540,7 +542,6 @@ const handleLogout = async () => {
 
   .anticon svg {
     display: inline-block;
-    color: var(--primary-color);
   }
 
   .ant-input-search-button {

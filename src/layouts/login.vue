@@ -101,6 +101,7 @@ const handleLogin = handleSubmit(async (values) => {
         console.error("Login error:", error);
         const errorMessage = error.response?.data?.message || "Đã xảy ra lỗi!";
         message.error(errorMessage);
+        loading.value = false;
     } finally {
         loading.value = true;
     }

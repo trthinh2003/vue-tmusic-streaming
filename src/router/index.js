@@ -9,8 +9,7 @@ import Swal from "sweetalert2";
 const routes = [
   ...login, 
   ...admin, 
-  ...client,
-  { path: '/:pathMatch(.*)', component: () => import("@/layouts/admin/index.vue") }
+  ...client
 ];
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

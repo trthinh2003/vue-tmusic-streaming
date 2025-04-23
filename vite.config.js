@@ -15,5 +15,15 @@ export default defineConfig({
     port: 5173,
     allowedHosts: "all",
   },
-  assetsInclude: ['**/*.lrc']
+  assetsInclude: ['**/*.lrc'],
+  build: {
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name].[hash].js`,
+        chunkFileNames: `assets/[name].[hash].js`,
+        assetFileNames: `assets/[name].[hash].[ext]`,
+      },
+    },
+  }
 })

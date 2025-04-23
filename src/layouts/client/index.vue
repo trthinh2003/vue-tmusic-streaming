@@ -531,14 +531,14 @@ const handleLogout = async () => {
   transform: translateX(-2px);
 }
 
-:where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-title {
+.ant-drawer .ant-drawer-title {
   color: var(--text-light);
 }
 
-:where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-close {
+.ant-drawer .ant-drawer-close {
   color: var(--text-light);
 }
-:where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-content {
+.ant-drawer .ant-drawer-content {
   background: rgba(26, 26, 46, 0.9);
 }
 
@@ -705,8 +705,8 @@ const handleLogout = async () => {
     color: white;
   }
 
-  :where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-content {
-    width: 350px;
+  .ant-drawer .ant-drawer-content {
+    width: 300px;
     margin-left: auto;
   }
 }

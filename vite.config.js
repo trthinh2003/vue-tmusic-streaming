@@ -14,5 +14,6 @@ export default defineConfig({
     host: true,
     port: 5173,
     allowedHosts: "all",
-  }
+  },
+  assetsInclude: ['**/*.lrc']
 })

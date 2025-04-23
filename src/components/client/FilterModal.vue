@@ -11,7 +11,12 @@
 				<a-input v-model:value="localFilters.songName" placeholder="Nhập tên bài hát" />
 			</a-form-item>
 			<a-form-item label="Tên nghệ sĩ">
-				<a-input v-model:value="localFilters.artistName" placeholder="Nhập tên nghệ sĩ" />
+				<div class="search__artist d-flex flex-row justify-content-between align-items-center">
+					<a-input v-model:value="localFilters.artistName" placeholder="Nhập tên nghệ sĩ" />
+					<a-button class="search__artist-btn ms-1">
+						<span class="search__artist-btn-text">...</span>
+					</a-button>
+				</div>
 			</a-form-item>
 			<a-form-item label="Thể loại">
 				<a-select v-model:value="localFilters.genre" placeholder="Chọn thể loại" allowClear>
@@ -52,7 +57,6 @@ const emit = defineEmits([
 
 const localFilters = ref({ ...props.filters });
 
-// Đồng bộ filters từ prop xuống local
 watch(() => props.filters, (newVal) => {
 	localFilters.value = { ...newVal };
 }, { deep: true });
@@ -70,7 +74,6 @@ const handleApply = () => {
 </script>
 
 <style scoped>
-/* Giữ nguyên phần style như trước */
 .dark-modal :deep(.ant-modal-content) {
 	background: #1e1e1e;
 	color: white;
@@ -85,6 +88,12 @@ const handleApply = () => {
 .dark-modal :deep(.ant-modal-footer) {
 	background: #252525;
 	border-top: 1px solid #444;
+}
+
+.search__artist-btn {
+	background: #c1d0c6;
+	border: none;
+	color: white;
 }
 
 .close-button {

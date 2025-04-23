@@ -35,7 +35,7 @@ export default {
         currentSong: Object,
         itemsPerPage: {
             type: Number,
-            default: 4
+            default: 3
         }
     },
     data() {

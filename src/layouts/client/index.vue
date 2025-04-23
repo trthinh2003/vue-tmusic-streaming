@@ -1,5 +1,5 @@
 <template>
-  <div class="music-app d-flex flex-column flex-sm-row">
+  <div class="music-app d-flex flex-column flex-sm-row" :style="{ backgroundImage: `url(${currentBackground})` }">
     <!-- Phần header mobile -->
     <div class="mobile-header d-flex d-sm-none align-items-center justify-content-between p-3">
       <a-button type="text" @click="showDrawer">
@@ -124,16 +124,18 @@
     <div class="d-flex flex-column justify-content-center align-items-center w-100">
       <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-4">
         <h1><span class="text-white">TMusic</span>Streaming</h1>
-        <a-button 
-          type="text" 
-          class="logout-btn"
-          @click="handleLogout"
-        >
-          <template #icon>
-            <i class="fa-solid fa-right-from-bracket me-1"></i>
-          </template>
-          <span>Đăng xuất</span>
-        </a-button>
+        <div>
+          <a-button 
+            type="text" 
+            class="logout-btn"
+            @click="handleLogout"
+          >
+            <template #icon>
+              <i class="fa-solid fa-right-from-bracket me-1"></i>
+            </template>
+            <span>Đăng xuất</span>
+          </a-button>
+        </div>
       </div>
       <div class="main-content">
         <player 
@@ -144,6 +146,7 @@
           @next-song="nextSong"
           @prev-song="prevSong"
           @update-shuffle="handleShuffleUpdate"
+          @timeupdate="updateAudioTime"
         />
       </div>
     </div>
@@ -155,6 +158,20 @@
     @update:filters="updateFilters"
     @update:modelValue="visibleModalFilter = false"
   />
+  <a-button type="text" class="toggle-sidebar-btn me-2" @click="toggleRightDrawer">
+    <i :class="showRightDrawer ? 'fa-solid fa-angle-left' : 'fa-solid fa-angle-right'"></i>
+  </a-button>
+  <a-drawer :width="500" title="Lời bài hát" placement="right" :open="openRightDrawer" @close="onCloseRightDrawer">
+    <template #extra>
+      <a-button style="margin-right: 8px" @click="onCloseRightDrawer">x</a-button>
+    </template>
+    <LyricDisplay 
+      v-if="currentLyric" 
+      :lyrics="currentLyric" 
+      :current-time="currentAudioTime" 
+    />
+    <p v-else>Không có lời bài hát</p>
+  </a-drawer>
 </template>
 
 <script setup>
@@ -162,6 +179,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
 import FilterModal from '@/components/client/FilterModal.vue'
+import LyricDisplay from '@/components/client/LyricDisplay.vue'
 import { Button, Drawer, Input } from 'ant-design-vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
@@ -178,13 +196,23 @@ import song2 from '@/assets/client/songs/song2.mp3'
 import song3 from '@/assets/client/songs/song3.mp3'
 import song4 from '@/assets/client/songs/song4.mp3'
 import song5 from '@/assets/client/songs/song5.mp3'
+import bg1 from '@/assets/client/backgrounds/bg-song1.jpg'
+import bg2 from '@/assets/client/backgrounds/bg-song2.jpg'
+import bg3 from '@/assets/client/backgrounds/bg-song3.jpg'
+import bg4 from '@/assets/client/backgrounds/bg-song4.jpg'
+import bg5 from '@/assets/client/backgrounds/bg-song5.jpg'
+import lyric1 from '@/assets/client/lyrics/lyric1.lrc'
+import lyric2 from '@/assets/client/lyrics/lyric2.lrc'
+import lyric3 from '@/assets/client/lyrics/lyric3.lrc'
+import lyric4 from '@/assets/client/lyrics/lyric4.lrc'
+import lyric5 from '@/assets/client/lyrics/lyric5.lrc'
 
 const originalPlaylist = [
-  { id: 1, title: "Bài hát 1", artist: "Nghệ sĩ A", genre: "Pop", cover: cover1, audio: song1, duration: '2:01' },
-  { id: 2, title: "Bài hát 2", artist: "Nghệ sĩ B", genre: "Jazz", cover: cover2, audio: song2, duration: '3:50' },
-  { id: 3, title: "Bài hát 3", artist: "Nghệ sĩ C", genre: "Pop", cover: cover3, audio: song3, duration: '3:49' },
-  { id: 4, title: "Bài hát 4", artist: "Nghệ sĩ D", genre: "Pop", cover: cover4, audio: song4, duration: '1:48' },
-  { id: 5, title: "Bài hát 4", artist: "Nghệ sĩ E", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32' }
+  { id: 1, title: "The World Hasn't Even Started Yet", artist: "WxS", genre: "Pop", cover: cover1, audio: song1, duration: '2:01', background: bg1, lyric: lyric1 },
+  { id: 2, title: "Composing The Future", artist: "25-ji, Nightcord de", genre: "Jazz", cover: cover2, audio: song2, duration: '3:50', background: bg2, lyric: lyric2 },
+  { id: 3, title: "Bad Apple!!", artist: "25-ji, Nightcord de", genre: "Pop", cover: cover3, audio: song3, duration: '3:49', background: bg3, lyric: lyric3 },
+  { id: 4, title: "Starry Sky Melody/星空のメロディ", artist: "Kusanagi Nene (WxS)", genre: "Pop", cover: cover4, audio: song4, duration: '1:48', background: bg4, lyric: lyric4 },
+  { id: 5, title: "Mặt Trái Của Sự Thật", artist: "HKT", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32', background: bg5, lyric: lyric5 },
 ]
 
 const songs = ref([...originalPlaylist])
@@ -197,6 +225,11 @@ const searchQuery = ref('') // Từ khóa tìm kiếm
 const router = useRouter()
 const visibleModalFilter = ref(false);
 const filters = ref({ songName: '', artistName: '', genre: '' });
+const showRightDrawer = ref(true)
+const openRightDrawer = ref(false)
+
+const currentLyric = ref('');
+const currentAudioTime = ref(0);
 
 const applyFilter = () => {
   // Nếu không có bộ lọc nào, khôi phục danh sách gốc
@@ -277,7 +310,7 @@ const handleSearch = () => {
   }
 }
 
-// Xáo trộn playlist
+// Trộn bài
 const shufflePlaylist = () => {
   const shuffled = [...originalPlaylist]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -349,6 +382,44 @@ watch(isShuffled, (newVal) => {
   }
 })
 
+// Theo dõi thay đổi bài hát
+watch(() => currentSong.value, async (newSong) => {
+  if (newSong.lyric) {
+    try {
+      // Giả sử lyric là một file được import
+      if (typeof newSong.lyric === 'string') {
+        const response = await fetch(newSong.lyric);
+        currentLyric.value = await response.text();
+      } else {
+        currentLyric.value = newSong.lyric;
+      }
+    } catch (error) {
+      console.error('Error loading lyric:', error);
+      currentLyric.value = '';
+    }
+  } else {
+    currentLyric.value = '';
+  }
+}, { immediate: true });
+
+// Thêm hàm cập nhật thời gian audio
+const updateAudioTime = (time) => {
+  currentAudioTime.value = time;
+};
+
+const toggleRightDrawer = () => {
+  showRightDrawer.value = !showRightDrawer.value
+  openRightDrawer.value = true;
+}
+
+const onCloseRightDrawer = () => {
+  openRightDrawer.value = false
+}
+
+const currentBackground = computed(() => {
+  return currentSong.value?.background || 'linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%)'
+})
+
 // Đăng xuất 
 const handleLogout = async () => {
   try {
@@ -367,15 +438,15 @@ const handleLogout = async () => {
 
 <style>
 :root {
-  --primary-color: #4361ee;       /* Màu chủ đạo - xanh dương */
-  --secondary-color: #3a0ca3;    /* Màu phụ - tím đậm */
-  --accent-color: #4cc9f0;       /* Màu nhấn - xanh sáng */
-  --dark-bg: #1a1a2e;           /* Nền tối */
-  --light-bg: #f8f9fa;          /* Nền sáng */
-  --text-light: #f8f9fa;        /* Chữ trên nền tối */
-  --text-dark: #212529;         /* Chữ trên nền sáng */
-  --card-bg: #16213e;           /* Nền card */
-  --hover-effect: rgba(255, 255, 255, 0.1); /* Hiệu ứng hover */
+  --primary-color: #4361ee;      
+  --secondary-color: #3a0ca3;    
+  --accent-color: #4cc9f0;      
+  --dark-bg: #1a1a2e;           
+  --light-bg: #f8f9fa;          
+  --text-light: #f8f9fa;        
+  --text-dark: #212529;         
+  --card-bg: #16213e;           
+  --hover-effect: rgba(255, 255, 255, 0.1); 
 }
 
 #app {
@@ -390,12 +461,32 @@ const handleLogout = async () => {
 .music-app {
   display: flex;
   height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.5s ease-in-out;
+  position: relative;
+}
+
+.music-app::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(26, 26, 46, 0.8);
+  z-index: 0;
+}
+
+.sidebar, .main-content, .mobile-header, .main-header {
+  position: relative;
+  z-index: 1;
 }
 
 /* Sidebar Styles */
 .sidebar {
-  width: 300px;
+  width: 310px;
   background: rgba(26, 26, 46, 0.9);
   backdrop-filter: blur(10px);
   color: var(--text-light);
@@ -411,6 +502,27 @@ const handleLogout = async () => {
   margin-bottom: 0.5rem;
   font-weight: 600;
   text-align: center;
+}
+
+/* Togge Sidebar Styles */
+.toggle-sidebar-btn {
+  position: fixed;
+  top: 50%;
+  right: -9px;
+  background: rgba(26, 26, 46, 0.9);
+  transform: translateY(-50%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+  color: var(--text-light);
+  transition: all 0.3s ease;
+  font-size: 20px;
+  z-index: 100;
+  height: 42px;
+}
+
+.toggle-sidebar-btn:hover {
+  color: var(--accent-color);
+  transform: translateX(-2px);
 }
 
 /* Filter Tags */
@@ -541,7 +653,7 @@ const handleLogout = async () => {
   transform: translateY(-2px);
 }
 
-/* Responsive Adjustments */
+/* Responsive cho mobile */
 @media (max-width: 576px) {
   .music-app {
     flex-direction: column;

@@ -11,6 +11,14 @@
 			<button class="download-btn position-absolute" @click.stop="downloadSong(song)" style="top:0; right:0;">
 				<i class="fa-solid fa-download"></i>
 			</button>
+			<!-- Thêm nút lyric -->
+			<button 
+				@click="toggleLyrics" 
+				:class="{ active: isLyricsVisible, 'lyrics-btn': true }" 
+				title="Hiển thị lyric"
+			>
+				<i class="fa-solid fa-file-lines"></i>
+			</button>
 		</div>
 
 		<div class="progress-container">
@@ -57,6 +65,10 @@
 			<span class="volume-percent">{{ Math.round(volume * 100) }}%</span>
 		</div>
 
+		<div v-if="isLyricsVisible" class="lyrics-container">
+			<p>{{ currentSong.lyrics }}</p>
+		</div>
+
 		<audio ref="audioPlayer" :src="currentSong.audio" @ended="handleSongEnd" @timeupdate="updateProgress"
 			@loadedmetadata="updateDuration" @volumechange="updateVolume">
 		</audio>
@@ -82,7 +94,8 @@ const emit = defineEmits([
 	'next-song',
 	'prev-song',
 	'update-shuffle',
-	'update-playlist'
+	'update-playlist',
+	'timeupdate'
 ])
 
 const audioPlayer = ref(null)
@@ -93,6 +106,7 @@ const progressPercentage = ref(0)
 const volume = ref(0.7)
 const isLooping = ref(false)
 const isShuffled = ref(false)
+const isLyricsVisible = ref(false) 
 
 // Format thời gian (phút:giây)
 const formatTime = (time) => {
@@ -105,6 +119,7 @@ const formatTime = (time) => {
 const updateProgress = () => {
 	currentTime.value = audioPlayer.value.currentTime
 	progressPercentage.value = (currentTime.value / duration.value) * 100
+	emit('timeupdate', currentTime.value)
 }
 
 // Cập nhật thời lượng bài hát
@@ -123,13 +138,7 @@ const seekAudio = (e) => {
 
 //Download bài hát
 const downloadSong = (song) => {
-  // const link = document.createElement('a');
-	console.log(song);
-  // link.href = song.audio;
-  // link.download = `${song.title} - ${song.artist}.mp3`;
-  // document.body.appendChild(link);
-  // link.click();
-	// document.body.removeChild(link);
+  console.log(song);
 }
 
 // Tua nhanh 10 giây
@@ -216,6 +225,11 @@ watch(() => props.currentSong, () => {
 		}, 100)
 	}
 })
+
+// Hàm bật/tắt lyric
+const toggleLyrics = () => {
+	isLyricsVisible.value = !isLyricsVisible.value
+}
 </script>
 
 <style scoped>
@@ -453,6 +467,19 @@ watch(() => props.currentSong, () => {
 	font-size: 1.2rem;
 	cursor: pointer;
 	border-radius: 50%;
+}
+
+.lyrics-btn {
+	position: absolute;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 50%;
+	color: #f8f9fa;
+	font-size: 1.2rem;
+	cursor: pointer;
+	border-radius: 50%;
+	top: 0;
+	left: 0;
 }
 
 @media (max-width: 576px) {

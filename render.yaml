@@ -2,11 +2,6 @@ staticPublishPath: dist
 buildCommand: npm run build
 
 routes:
-  # Cho phép API hoạt động bình thường
-  - type: rewrite
-    source: ^/api/.*$
-    destination: /api/:splat
-
   # Cho phép truy cập đúng đường dẫn /watch (trong trường hợp bạn có file thật sự hoặc cần xử lý riêng)
   - type: rewrite
     source: ^/watch$

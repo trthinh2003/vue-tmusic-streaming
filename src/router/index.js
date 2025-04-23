@@ -10,7 +10,7 @@ const routes = [
   ...login, 
   ...admin, 
   ...client,
-  { path: '/:pathMatch(.*)', component: NotFoundComponent }
+  { path: '/:pathMatch(.*)', component: () => import("@/layouts/admin/index.vue") }
 ];
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

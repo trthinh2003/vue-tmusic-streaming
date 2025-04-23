@@ -1,11 +1,25 @@
 <template>
   <div class="lyric-container">
-    <div class="lyric-line" v-for="(line, index) in parsedLyrics" :key="index"
-      :class="{ active: currentLineIndex === index }">
+    <div
+      class="lyric-line"
+      v-for="(line, index) in parsedLyrics"
+      :key="index"
+      :class="{ active: currentLineIndex === index }"
+    >
       <span class="lyric-text">
-        <span class="lyric-part" v-for="(part, partIndex) in line.parts" :key="partIndex"
-          :style="{ color: partIndex < currentPartIndex ? highlightedColor : normalColor, 
-                   textShadow: partIndex < currentPartIndex ? '0 0 10px rgba(67, 97, 238, 0.8)' : '' }">
+        <span
+          class="lyric-part"
+          v-for="(part, partIndex) in line.parts"
+          :key="partIndex"
+          :style="{
+            color: currentLineIndex === index && partIndex < currentPartIndex
+              ? highlightedColor
+              : normalColor,
+            textShadow: currentLineIndex === index && partIndex < currentPartIndex
+              ? '0 0 10px rgba(67, 97, 238, 0.8)'
+              : ''
+          }"
+        >
           {{ part.text }}
         </span>
       </span>
@@ -14,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 
 const props = defineProps({
   lyrics: String,
@@ -42,9 +56,7 @@ const parseLyrics = (lrcText) => {
     const time = minutes * 60 + seconds;
     const text = line.replace(timeMatch[0], '').trim();
 
-    const parts = text.split(/(\s+)/).map(part => {
-      return { text: part };
-    });
+    const parts = text.split(/(\s+)/).map(part => ({ text: part }));
 
     result.push({ time, text, parts });
   });
@@ -97,14 +109,22 @@ watch(() => props.currentTime, (time) => {
         break;
       }
     }
-    
-    // Cập nhật phần cuối của lyric (để "tôi" cũng hiển thị)
+
+    // Nếu là dòng cuối thì hiển thị hết phần còn lại
     if (lineIndex === parsedLyrics.value.length - 1) {
       const remainingChars = totalChars - accumulated;
       if (remainingChars > 0) {
-        currentPartIndex.value = line.parts.length; // Đảm bảo tất cả các phần cuối cùng được hiển thị.
+        currentPartIndex.value = line.parts.length;
       }
     }
+
+    // Scroll đến dòng hiện tại
+    nextTick(() => {
+      const activeLine = document.querySelector('.lyric-line.active');
+      if (activeLine) {
+        activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
   }
 });
 </script>
@@ -150,5 +170,11 @@ watch(() => props.currentTime, (time) => {
 
 .lyric-part:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 576px) {
+  .lyric-line {
+    font-size: 14px;
+  }
 }
 </style>

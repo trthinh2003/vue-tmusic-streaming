@@ -161,7 +161,7 @@
   <a-button type="text" class="toggle-sidebar-btn me-2" @click="toggleRightDrawer">
     <i :class="showRightDrawer ? 'fa-solid fa-angle-left' : 'fa-solid fa-angle-right'"></i>
   </a-button>
-  <a-drawer :width="500" title="Lời bài hát" placement="right" :open="openRightDrawer" @close="onCloseRightDrawer">
+  <a-drawer class="lyric-drawer-right" :width="500" title="Lời bài hát" placement="right" :open="openRightDrawer" @close="onCloseRightDrawer">
     <template #extra>
       <a-button style="margin-right: 8px" @click="onCloseRightDrawer">x</a-button>
     </template>
@@ -169,7 +169,13 @@
       v-if="currentLyric" 
       :lyrics="currentLyric" 
       :current-time="currentAudioTime" 
-    />
+      :style="{ 
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${currentBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }"
+     />
     <p v-else>Không có lời bài hát</p>
   </a-drawer>
 </template>
@@ -525,6 +531,17 @@ const handleLogout = async () => {
   transform: translateX(-2px);
 }
 
+:where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-title {
+  color: var(--text-light);
+}
+
+:where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-close {
+  color: var(--text-light);
+}
+:where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-content {
+  background: rgba(26, 26, 46, 0.9);
+}
+
 /* Filter Tags */
 .filter-tags {
   background: rgba(26, 26, 46, 0.9);
@@ -686,6 +703,11 @@ const handleLogout = async () => {
     background: white;
     border-color: var(--primary-color);
     color: white;
+  }
+
+  :where(.css-dev-only-do-not-override-1p3hq3p).ant-drawer .ant-drawer-content {
+    width: 350px;
+    margin-left: auto;
   }
 }
 </style>

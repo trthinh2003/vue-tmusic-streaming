@@ -6,9 +6,15 @@ import { getProfile } from "@/services/authService";
 import { useProfileStore } from "@/stores/useProfile.js";
 import Swal from "sweetalert2";
 
-const routes = [...login, ...admin, ...client];
+const routes = [
+  ...login, 
+  ...admin, 
+  ...client,
+  { path: '/:pathMatch(.*)', component: NotFoundComponent }
+];
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+
   routes,
 });
 

@@ -139,6 +139,7 @@
       </div>
       <div class="main-content">
         <player 
+          ref="playerRef"
           :current-song="currentSong"
           :is-playing="isPlaying"
           :playlist="filteredSongs"
@@ -159,9 +160,21 @@
     @update:modelValue="visibleModalFilter = false"
   />
   <a-button type="text" class="toggle-sidebar-btn me-2" @click="toggleRightDrawer">
-    <i :class="showRightDrawer ? 'fa-solid fa-angle-left' : 'fa-solid fa-angle-right'"></i>
+    <i class="fa-solid fa-angle-left"></i>
   </a-button>
-  <a-drawer class="lyric-drawer-right" :width="500" title="Lời bài hát" placement="right" :open="openRightDrawer" @close="onCloseRightDrawer">
+  <a-drawer 
+    class="lyric-drawer-right" 
+    :width="500" title="Lời bài hát" 
+    placement="right" 
+    :open="openRightDrawer" 
+    @close="onCloseRightDrawer"
+    :style="{ 
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${currentBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }"
+  >
     <template #extra>
       <a-button style="margin-right: 8px" @click="onCloseRightDrawer">x</a-button>
     </template>
@@ -169,12 +182,7 @@
       v-if="currentLyric" 
       :lyrics="currentLyric" 
       :current-time="currentAudioTime" 
-      :style="{ 
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${currentBackground})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }"
+      @seek="handleSeek"
      />
     <p v-else>Không có lời bài hát</p>
   </a-drawer>
@@ -243,7 +251,6 @@ const applyFilter = () => {
     songs.value = [...originalPlaylist];
     return;
   }
-
   // Áp dụng bộ lọc
   songs.value = originalPlaylist.filter(song => {
     const matchesSongName = filters.value.songName 
@@ -260,6 +267,14 @@ const applyFilter = () => {
     
     return matchesSongName && matchesArtistName && matchesGenre;
   });
+};
+
+const playerRef = ref(null);
+
+const handleSeek = (time) => {
+  if (playerRef.value) {
+    playerRef.value.seekTo(time);
+  }
 };
 
 /**************** Tags ****************/
@@ -462,6 +477,7 @@ const handleLogout = async () => {
   height: 100vh;
   background: linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%);
   color: var(--text-light);
+  overflow: hidden;
 }
 
 .music-app {
@@ -659,6 +675,14 @@ const handleLogout = async () => {
 
 .mobile-drawer .ant-drawer-title {
   color: var(--text-light);
+}
+
+.ant-drawer .ant-drawer-body {
+  overflow: hidden;
+}
+
+.ant-drawer .ant-drawer-extra {
+  display: none;
 }
 
 /* Button Styles */

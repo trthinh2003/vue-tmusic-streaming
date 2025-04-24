@@ -230,6 +230,18 @@ watch(() => props.currentSong, () => {
 const toggleLyrics = () => {
 	isLyricsVisible.value = !isLyricsVisible.value
 }
+
+const seekTo = (time) => {
+  if (audioPlayer.value) {
+    audioPlayer.value.currentTime = time;
+    currentTime.value = time;
+    progressPercentage.value = (time / duration.value) * 100;
+  }
+};
+
+defineExpose({
+  seekTo
+});
 </script>
 
 <style scoped>

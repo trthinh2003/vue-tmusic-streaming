@@ -261,7 +261,7 @@ const originalPlaylist = [
   { id: 9, title: "Sakayume (Jujutsu Kaisen 0)", artist: "King Gnu", genre: "Pop", cover: cover9, audio: song9, duration: '5:07', background: bg9, lyric: lyric9 },
   { id: 10, title: "Hazy Moon", artist: "Hatsune Miku", genre: "Pop", cover: cover10, audio: song10, duration: '4:15', background: bg10, lyric: lyric10 },
   { id: 11, title: "Yoru Ni Kakeru / 夜に駆ける", artist: "YOASOBI", genre: "Pop", cover: cover11, audio: song11, duration: '4:18', background: bg11, lyric: lyric11 },
-  { id: 12, title: "Yume Wo Kanaete Doraemon", artist: "MAO", genre: "Pop", cover: cover12, audio: song12, duration: '4:01', background: bg12, lyric: lyric12 },
+  { id: 122, title: "Yume Wo Kanaete Doraemon", artist: "MAO", genre: "Pop", cover: cover12, audio: song12, duration: '4:01', background: bg12, lyric: lyric12 },
 ]
 
 const songs = ref([...originalPlaylist])

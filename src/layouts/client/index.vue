@@ -210,6 +210,8 @@ import cover7 from '@/assets/client/covers/cover7.jpg'
 import cover8 from '@/assets/client/covers/cover8.jpg'
 import cover9 from '@/assets/client/covers/cover9.jpg'
 import cover10 from '@/assets/client/covers/cover10.jpg'
+import cover11 from '@/assets/client/covers/cover11.jpg'
+import cover12 from '@/assets/client/covers/cover12.jpg'
 import song1 from '@/assets/client/songs/song1.mp3'
 import song2 from '@/assets/client/songs/song2.mp3'
 import song3 from '@/assets/client/songs/song3.mp3'
@@ -220,6 +222,8 @@ import song7 from '@/assets/client/songs/song7.mp3'
 import song8 from '@/assets/client/songs/song8.mp3'
 import song9 from '@/assets/client/songs/song9.mp3'
 import song10 from '@/assets/client/songs/song10.mp3'
+import song11 from '@/assets/client/songs/song11.mp3'
+import song12 from '@/assets/client/songs/song12.mp3'
 import bg1 from '@/assets/client/backgrounds/bg-song1.jpg'
 import bg2 from '@/assets/client/backgrounds/bg-song2.jpg'
 import bg3 from '@/assets/client/backgrounds/bg-song3.jpg'
@@ -230,6 +234,8 @@ import bg7 from '@/assets/client/backgrounds/bg-song7.jpg'
 import bg8 from '@/assets/client/backgrounds/bg-song8.jpg'
 import bg9 from '@/assets/client/backgrounds/bg-song9.jpg'
 import bg10 from '@/assets/client/backgrounds/bg-song10.jpg'
+import bg11 from '@/assets/client/backgrounds/bg-song11.jpg'
+import bg12 from '@/assets/client/backgrounds/bg-song12.jpg'
 import lyric1 from '@/assets/client/lyrics/lyric1.lrc'
 import lyric2 from '@/assets/client/lyrics/lyric2.lrc'
 import lyric3 from '@/assets/client/lyrics/lyric3.lrc'
@@ -240,6 +246,8 @@ import lyric7 from '@/assets/client/lyrics/lyric7.lrc'
 import lyric8 from '@/assets/client/lyrics/lyric8.lrc'
 import lyric9 from '@/assets/client/lyrics/lyric9.lrc'
 import lyric10 from '@/assets/client/lyrics/lyric10.lrc'
+import lyric11 from '@/assets/client/lyrics/lyric11.lrc'
+import lyric12 from '@/assets/client/lyrics/lyric12.lrc'
 
 const originalPlaylist = [
   { id: 1, title: "The World Hasn't Even Started Yet", artist: "WxS", genre: "Pop", cover: cover1, audio: song1, duration: '2:01', background: bg1, lyric: lyric1 },
@@ -252,6 +260,8 @@ const originalPlaylist = [
   { id: 8, title: "Blue Bird", artist: "Ikimonogakari", genre: "Pop", cover: cover8, audio: song8, duration: '3:32', background: bg8, lyric: lyric8 },
   { id: 9, title: "Sakayume (Jujutsu Kaisen 0)", artist: "King Gnu", genre: "Pop", cover: cover9, audio: song9, duration: '5:07', background: bg9, lyric: lyric9 },
   { id: 10, title: "Hazy Moon", artist: "Hatsune Miku", genre: "Pop", cover: cover10, audio: song10, duration: '4:15', background: bg10, lyric: lyric10 },
+  { id: 11, title: "Yoru Ni Kakeru / 夜に駆ける", artist: "YOASOBI", genre: "Pop", cover: cover11, audio: song11, duration: '4:18', background: bg11, lyric: lyric11 },
+  { id: 12, title: "Yume Wo Kanaete Doraemon", artist: "MAO", genre: "Pop", cover: cover12, audio: song12, duration: '4:01', background: bg12, lyric: lyric12 },
 ]
 
 const songs = ref([...originalPlaylist])

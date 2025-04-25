@@ -207,6 +207,7 @@ import cover4 from '@/assets/client/covers/cover4.jpg'
 import cover5 from '@/assets/client/covers/cover5.jpg'
 import cover6 from '@/assets/client/covers/cover6.jpg'
 import cover7 from '@/assets/client/covers/cover7.jpg'
+import cover8 from '@/assets/client/covers/cover8.jpg'
 import song1 from '@/assets/client/songs/song1.mp3'
 import song2 from '@/assets/client/songs/song2.mp3'
 import song3 from '@/assets/client/songs/song3.mp3'
@@ -214,6 +215,7 @@ import song4 from '@/assets/client/songs/song4.mp3'
 import song5 from '@/assets/client/songs/song5.mp3'
 import song6 from '@/assets/client/songs/song6.mp3'
 import song7 from '@/assets/client/songs/song7.mp3'
+import song8 from '@/assets/client/songs/song8.mp3'
 import bg1 from '@/assets/client/backgrounds/bg-song1.jpg'
 import bg2 from '@/assets/client/backgrounds/bg-song2.jpg'
 import bg3 from '@/assets/client/backgrounds/bg-song3.jpg'
@@ -221,6 +223,7 @@ import bg4 from '@/assets/client/backgrounds/bg-song4.jpg'
 import bg5 from '@/assets/client/backgrounds/bg-song5.jpg'
 import bg6 from '@/assets/client/backgrounds/bg-song6.jpg'
 import bg7 from '@/assets/client/backgrounds/bg-song7.jpg'
+import bg8 from '@/assets/client/backgrounds/bg-song8.jpg'
 import lyric1 from '@/assets/client/lyrics/lyric1.lrc'
 import lyric2 from '@/assets/client/lyrics/lyric2.lrc'
 import lyric3 from '@/assets/client/lyrics/lyric3.lrc'
@@ -228,6 +231,7 @@ import lyric4 from '@/assets/client/lyrics/lyric4.lrc'
 import lyric5 from '@/assets/client/lyrics/lyric5.lrc'
 import lyric6 from '@/assets/client/lyrics/lyric6.lrc'
 import lyric7 from '@/assets/client/lyrics/lyric7.lrc'
+import lyric8 from '@/assets/client/lyrics/lyric8.lrc'
 
 const originalPlaylist = [
   { id: 1, title: "The World Hasn't Even Started Yet", artist: "WxS", genre: "Pop", cover: cover1, audio: song1, duration: '2:01', background: bg1, lyric: lyric1 },
@@ -236,7 +240,8 @@ const originalPlaylist = [
   { id: 4, title: "Starry Sky Melody/星空のメロディ", artist: "Kusanagi Nene (WxS)", genre: "Pop", cover: cover4, audio: song4, duration: '1:48', background: bg4, lyric: lyric4 },
   { id: 5, title: "Mặt Trái Của Sự Thật", artist: "HKT", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32', background: bg5, lyric: lyric5 },
   { id: 6, title: "Senbonzakura", artist: "Hatsune Miku", genre: "Pop", cover: cover6, audio: song6, duration: '4:04', background: bg6, lyric: lyric6 },
-  { id: 6, title: "Em Của Ngày Hôm Qua", artist: "Sơn Tùng M-TP", genre: "Pop", cover: cover7, audio: song7, duration: '3:52', background: bg7, lyric: lyric7 },
+  { id: 7, title: "Em Của Ngày Hôm Qua", artist: "Sơn Tùng M-TP", genre: "Pop", cover: cover7, audio: song7, duration: '3:52', background: bg7, lyric: lyric7 },
+  { id: 8, title: "Blue Bird", artist: "Ikimonogakari", genre: "Pop", cover: cover8, audio: song8, duration: '3:33', background: bg8, lyric: lyric8 },
 ]
 
 const songs = ref([...originalPlaylist])

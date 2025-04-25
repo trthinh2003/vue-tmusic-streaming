@@ -25,6 +25,9 @@
           {{ part.text }}
         </span>
       </span>
+      <div v-if="line.translation" class="lyric-translation">
+        {{ line.translation }}
+      </div>
     </div>
   </div>
 </template>
@@ -52,48 +55,44 @@ const handleLyricClick = (time) => {
 
 const parseLyrics = (lrcText) => {
   const lines = lrcText.split('\n');
-  const result = [];
+  const temp = [];
 
   lines.forEach(line => {
-    if (!line.trim()) return;
-
-    // Xử lý nhiều timestamp (cho các dòng lặp lại)
     const timeMatches = [...line.matchAll(/\[(\d+):(\d+\.\d+)\]/g)];
     if (!timeMatches.length) return;
 
     const text = line.replace(/\[(\d+):(\d+\.\d+)\]/g, '').trim();
-    if (!text) return; // Bỏ qua dòng chỉ có timestamp không có lời
-
     timeMatches.forEach(match => {
       const minutes = parseFloat(match[1]);
       const seconds = parseFloat(match[2]);
       const time = minutes * 60 + seconds;
 
-      // Chia thành các từ và giữ lại khoảng trắng
-      const words = text.split(/(\s+)/).filter(part => part);
-      const parts = words.map(word => ({
-        text: word,
-        isSpace: /^\s+$/.test(word)
-      }));
-
-      result.push({ time, text, parts });
+      temp.push({ time, text });
     });
   });
 
-  // Sắp xếp theo thời gian
-  result.sort((a, b) => a.time - b.time);
-  
-  // Gộp các dòng trùng lặp
-  const uniqueResult = [];
-  result.forEach(item => {
-    const existing = uniqueResult.find(i => i.time === item.time);
-    if (!existing) {
-      uniqueResult.push(item);
+  // Gom các dòng trùng time
+  const merged = [];
+  temp.forEach(({ time, text }) => {
+    const last = merged[merged.length - 1];
+    if (last && last.time === time) {
+      last.translation = text;
+    } else {
+      merged.push({
+        time,
+        text,
+        translation: null,
+        parts: text.split(/(\s+)/).filter(Boolean).map(word => ({
+          text: word,
+          isSpace: /^\s+$/.test(word)
+        }))
+      });
     }
   });
-  
-  return uniqueResult;
+
+  return merged;
 };
+
 
 watch(() => props.lyrics, (newVal) => {
   if (newVal) {
@@ -205,6 +204,13 @@ watch(() => props.currentTime, (time) => {
 
 .lyric-part:hover {
   text-decoration: underline;
+}
+
+.lyric-translation {
+  font-size: 14px;
+  color: #ccc;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 @media (max-width: 576px) {

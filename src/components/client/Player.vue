@@ -287,9 +287,7 @@ defineExpose({
 	width: 30px;
 	height: 30px;
 	border-radius: 50%;
-	background: #1a1a2e;
 	z-index: 2;
-	box-shadow: inset 0 0 0 2px #4cc9f0;
 }
 
 .disc::after {
@@ -298,7 +296,6 @@ defineExpose({
 	width: 15px;
 	height: 15px;
 	border-radius: 50%;
-	background: #4cc9f0;
 	z-index: 3;
 }
 
@@ -307,8 +304,8 @@ defineExpose({
 }
 
 .album-cover {
-	width: 70%;
-	height: 70%;
+	width: 75%;
+	height: 75%;
 	border-radius: 50%;
 	object-fit: cover;
 	position: relative;

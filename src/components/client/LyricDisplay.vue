@@ -133,7 +133,7 @@ watch(() => props.currentTime, (time) => {
     const progress = Math.min(1, elapsedInLine / lineDuration);
 
     const totalParts = line.parts.filter(p => !p.isSpace).length;
-    let partsShown = Math.floor(totalParts * progress);
+    let partsShown = Math.round(totalParts * progress);
     partsShown = Math.max(0, Math.min(totalParts, partsShown));
 
     // Tính currentPartIndex bao gồm cả khoảng trắng

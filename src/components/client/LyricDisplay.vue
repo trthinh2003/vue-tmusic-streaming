@@ -12,15 +12,11 @@
           class="lyric-part"
           v-for="(part, partIndex) in line.parts"
           :key="partIndex"
-          :style="{
-            color: currentLineIndex === index && partIndex < currentPartIndex
-              ? highlightedColor
-              : normalColor,
-            textShadow: currentLineIndex === index && partIndex < currentPartIndex
-              ? '0 0 10px rgba(67, 97, 238, 0.8)'
-              : '',
-            'white-space': part.isWord ? 'normal' : 'pre'
+          :class="{
+            'karaoke-fill': currentLineIndex === index && partIndex === currentPartIndex,
+            'karaoke-done': currentLineIndex === index && partIndex < currentPartIndex
           }"
+          :style="{ 'white-space': part.isWord ? 'normal' : 'pre' }"
         >
           {{ part.text }}
         </span>
@@ -197,9 +193,11 @@ watch(() => props.currentTime, (time) => {
 }
 
 .lyric-part {
-  display: inline;
-  transition: color 0.3s ease, text-shadow 0.3s ease;
-  white-space: pre-wrap;
+  position: relative;
+  display: inline-block;
+  color: #ffffff;
+  font-weight: normal;
+  padding-right: 2px;
 }
 
 .lyric-part:hover {
@@ -211,6 +209,40 @@ watch(() => props.currentTime, (time) => {
   color: #ccc;
   margin-top: 4px;
   font-style: italic;
+}
+
+/* Từ đã tô xong */
+.karaoke-done {
+  color: #4361ee;
+  text-shadow: 0 0 10px rgba(67, 97, 238, 0.8);
+}
+
+/* Từ đang được tô */
+.karaoke-fill {
+  color: #ffffff;
+}
+
+.karaoke-fill::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #4361ee;
+  width: 0%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(67, 97, 238, 0.8);
+  animation: fillText 0.8s linear forwards;
+}
+
+/* Dòng text sẽ được "tô" từ trái sang phải */
+@keyframes fillText {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 @media (max-width: 576px) {

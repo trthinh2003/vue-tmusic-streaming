@@ -235,7 +235,6 @@ watch(() => props.currentTime, (time) => {
   animation: fillText 0.8s linear forwards;
 }
 
-/* Dòng text sẽ được "tô" từ trái sang phải */
 @keyframes fillText {
   from {
     width: 0%;
@@ -247,7 +246,7 @@ watch(() => props.currentTime, (time) => {
 
 @media (max-width: 576px) {
   .lyric-line {
-    font-size: 14px;
+    font-size: 16px;
   }
 }
 </style>

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import login from "./login";
+import register from "./register";
 import admin from "./admin";
 import client from "./client";
 import { getProfile } from "@/services/authService";
@@ -8,6 +9,7 @@ import Swal from "sweetalert2";
 
 const routes = [
   ...login, 
+  ...register,
   ...admin, 
   ...client
 ];

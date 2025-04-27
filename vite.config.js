@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173,
     allowedHosts: "all",
   },
-  assetsInclude: ['**/*.lrc'],
+  assetsInclude: ['**/*.lrc', '**/*.ani'],
   build: {
     assetsDir: 'assets',
     rollupOptions: {

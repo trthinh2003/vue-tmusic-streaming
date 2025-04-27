@@ -2,7 +2,7 @@
     <div class="login-container">
         <div class="login-box">
             <div class="logo-area">
-                <img src="@/assets/img/logo.png" alt="Music Admin Logo" class="logo">
+                <img src="@/assets/img/logo.png" alt="TMusic Streaming Logo" class="logo">
                 <h2 class="logo-title">TMusic<span>Streaming</span></h2>
             </div>
 
@@ -37,6 +37,10 @@
                 </button>
             </form>
 
+            <div class="register-link text-center">
+                <p>Chưa có tài khoản? <router-link :to="{ name: 'register' }">Đăng ký</router-link></p>
+            </div>
+
             <div class="social-login">
                 <p>Hoặc đăng nhập bằng</p>
                 <div class="social-icons">
@@ -61,15 +65,11 @@
 
 <script setup>
 import { ref } from 'vue';
-import axiosInstance from '@/configs/axios.js';
 import { useRouter } from 'vue-router';
 import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
 import { message } from 'ant-design-vue';
-import { getProfile } from '@/services/authService';
-import { useProfileStore } from '@/stores/useProfile.js';
-
-const profileStore = useProfileStore();
+import { login } from '@/services/authService';
 
 const schema = yup.object({
     email: yup.string().email("Vui lòng nhập đúng định dạng email.").required("Vui lòng nhập email."),
@@ -85,25 +85,19 @@ const router = useRouter();
 
 const handleLogin = handleSubmit(async (values) => {
     try {
-        // console.log(values);
         loading.value = true;
-        const response = await axiosInstance.post('/auth/login', values);
-        message.success(response.data.message);
-        await getProfile();
-        console.log(profileStore.profile.role);
-        if (profileStore.profile.role === 'User') {
-            setTimeout(() => { router.push({ name: 'client' }); }, 500);
-        }
-        else {
-            setTimeout(() => { router.push({ name: 'admin-dashboard' }); }, 500);
-        }
+        const role = await login(values);
+        message.success('Đăng nhập thành công!');
+
+        setTimeout(() => {
+            router.push({ name: role === 'User' ? 'client' : 'admin-dashboard' });
+        }, 500);
     } catch (error) {
         console.error("Login error:", error);
         const errorMessage = error.response?.data?.message || "Đã xảy ra lỗi!";
         message.error(errorMessage);
-        loading.value = false;
     } finally {
-        loading.value = true;
+        loading.value = false;
     }
 });
 </script>

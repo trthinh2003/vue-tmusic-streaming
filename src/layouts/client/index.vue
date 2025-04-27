@@ -765,7 +765,7 @@ const handleLogout = async () => {
   }
 
   .ant-drawer .ant-drawer-content {
-    width: 300px;
+    width: 310px;
     margin-left: auto;
   }
 }

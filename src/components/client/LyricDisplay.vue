@@ -45,7 +45,7 @@ const currentLineIndex = ref(-1);
 const currentPartIndex = ref(0);
 
 const handleLyricClick = (time) => {
-  emit('seek', time); // Phát ra sự kiện seek với thời gian tương ứng
+  emit('seek', time); 
   console.log(time);
 };
 
@@ -99,7 +99,7 @@ watch(() => props.lyrics, (newVal) => {
 watch(() => props.currentTime, (time) => {
   if (!parsedLyrics.value.length) return;
 
-  // Tìm dòng có thời gian lớn nhất nhưng nhỏ hơn currentTime
+  // Tìm dòng có thời gian lớn nhất < currentTime
   let lineIndex = -1;
   for (let i = 0; i < parsedLyrics.value.length; i++) {
     if (parsedLyrics.value[i].time <= time) {
@@ -111,7 +111,7 @@ watch(() => props.currentTime, (time) => {
 
   if (lineIndex !== currentLineIndex.value) {
     currentLineIndex.value = lineIndex;
-    currentPartIndex.value = 0; // Reset phần từ khi chuyển dòng
+    currentPartIndex.value = 0; // Reset từ khi chuyển dòng
   }
 
   if (lineIndex >= 0) {
@@ -122,7 +122,7 @@ watch(() => props.currentTime, (time) => {
 
     const lineDuration = nextLine 
       ? nextLine.time - line.time 
-      : 4; // Thời gian mặc định cho dòng cuối
+      : 4;
 
     const elapsedInLine = time - line.time;
     const progress = Math.min(1, elapsedInLine / lineDuration);
@@ -131,7 +131,7 @@ watch(() => props.currentTime, (time) => {
     let partsShown = Math.round(totalParts * progress);
     partsShown = Math.max(0, Math.min(totalParts, partsShown));
 
-    // Tính currentPartIndex bao gồm cả khoảng trắng
+    /*********** Tính currentPartIndex bao gồm cả khoảng trắng ***********/
     let charCount = 0;
     let actualPartIndex = 0;
     for (let i = 0; i < line.parts.length; i++) {
@@ -144,7 +144,7 @@ watch(() => props.currentTime, (time) => {
 
     currentPartIndex.value = actualPartIndex;
 
-    // Tự động cuộn đến dòng hiện tại
+    /*********** Tự động cuộn đến dòng hiện tại ***********/
     nextTick(() => {
       const activeLine = document.querySelector('.lyric-line.active');
       if (activeLine) {

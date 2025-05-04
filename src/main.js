@@ -13,7 +13,13 @@ import {
     Select,
     Tag,
     Col,
-    Row
+    Row,
+    DatePicker,
+    Tabs,
+    Menu,
+    Dropdown,
+    Upload,
+    Popconfirm
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -42,6 +48,12 @@ app.use(Select)
 app.use(Tag)
 app.use(Col)
 app.use(Row)
+app.use(DatePicker)
+app.use(Tabs)
+app.use(Menu)
+app.use(Dropdown)
+app.use(Upload)
+app.use(Popconfirm)
 app.use(formatDate)
 app.use(truncateWords)
 app.use(router)

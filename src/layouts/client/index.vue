@@ -172,7 +172,9 @@
         backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${currentBackground})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundRepeat: 'no-repeat',
+        width: '75%',
+        marginLeft: 'auto',
       }"
   >
     <template #extra>
@@ -424,7 +426,6 @@ const prevSong = () => {
   isPlaying.value = true
 }
 
-// Khởi tạo
 onMounted(() => {
   currentSong.value = songs.value[0]
 })
@@ -618,15 +619,6 @@ const handleLogout = async () => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.ant-input-search .ant-input {
-  background: transparent;
-  color: var(--text-light);
-}
-
-.ant-input-search .ant-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
 .ant-input-search-button {
   background: var(--primary-color);
   border-color: var(--primary-color);
@@ -728,6 +720,13 @@ const handleLogout = async () => {
 .ant-btn:hover {
   transform: translateY(-2px);
 }
+</style>
+
+<style scoped>
+.ant-input-search .ant-input {
+  background: transparent;
+  color: #f8f9fa;
+}
 
 /* Responsive cho mobile */
 @media (max-width: 576px) {
@@ -762,11 +761,6 @@ const handleLogout = async () => {
     background: white;
     border-color: var(--primary-color);
     color: white;
-  }
-
-  .ant-drawer .ant-drawer-content {
-    width: 310px;
-    margin-left: auto;
   }
 }
 </style>

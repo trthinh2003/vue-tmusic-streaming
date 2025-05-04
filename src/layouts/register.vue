@@ -54,7 +54,8 @@
           <div class="form-options mb-1">
             <label class="d-flex align-items-center">
               <input type="checkbox" v-model="agreePolicy" class="me-2" />
-              Tôi đồng ý với <a href="/terms" target="_blank" class="text-primary mx-1">chính sách sử dụng</a> của TMusic.
+              <span class="text-dark">Tôi đồng ý với </span> 
+              <a href="/terms" target="_blank" class="text-primary mx-1">chính sách sử dụng</a> của TMusic.
             </label>
           </div>
           <span v-if="errors.agreePolicy" class="error-text mb-1">{{ errors.agreePolicy }}</span>
@@ -66,7 +67,7 @@
         </form>
 
         <div class="form-footer text-center">
-          Đã có tài khoản? <router-link :to="{ name: 'login' }">Đăng nhập</router-link> ngay
+          <span class="text-dark">Đã có tài khoản?</span> <router-link :to="{ name: 'login' }">Đăng nhập</router-link>
         </div>
       </div>
     </div>

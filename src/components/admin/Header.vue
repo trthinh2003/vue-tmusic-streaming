@@ -8,7 +8,7 @@
         </div>
         <div class="header-right">
             <div class="user-profile">
-                <img src="" alt="User" class="user-avatar">
+                <img src="@/assets/img/admin-logo.png" alt="User" class="user-avatar">
                 <span class="user-name">Admin User</span>
                 <i class="fas fa-chevron-down"></i>
             </div>

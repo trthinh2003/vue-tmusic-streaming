@@ -24,7 +24,7 @@
                 <div class="form-options">
                     <label class="remember-me">
                         <input type="checkbox">
-                        <span>Ghi nhớ đăng nhập</span>
+                        <span class="text-dark">Ghi nhớ đăng nhập</span>
                     </label>
                     <a href="#" class="forgot-password">Quên mật khẩu?</a>
                 </div>
@@ -38,7 +38,7 @@
             </form>
 
             <div class="register-link text-center">
-                <p>Chưa có tài khoản? <router-link :to="{ name: 'register' }">Đăng ký</router-link></p>
+                <p class="text-dark">Chưa có tài khoản? <router-link :to="{ name: 'register' }">Đăng ký</router-link></p>
             </div>
 
             <div class="social-login">

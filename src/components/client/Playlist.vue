@@ -1,66 +1,66 @@
 <template>
-    <div class="playlist">
-        <h2>Playlist</h2>
-        <ul>
-            <song-item 
-                v-for="song in paginatedSongs" 
-                :key="song.id" 
-                :song="song" 
-                :is-current="song.id === currentSong.id"
-                @click.native="$emit('select-song', song)" 
-            />
-        </ul>
-
-        <!-- Điều khiển phân trang -->
-        <div class="pagination-controls mt-4">
-            <button @click="prevPage" :disabled="currentPage === 1"><</button>
-            <span class="text-white mx-2">{{ currentPage }} / {{ totalPages }}</span>
-            <button @click="nextPage" :disabled="currentPage === totalPages">></button>
-        </div>
+  <div class="playlist">
+    <h2>Playlist</h2>
+    <ul>
+      <song-item 
+        v-for="song in paginatedSongs" 
+          :key="song.id" 
+          :song="song" 
+          :is-current="song.id === currentSong.id"
+          @click.native="$emit('select-song', song)" 
+      />
+    </ul>
+    <div class="pagination-controls mt-4">
+      <button @click="prevPage" :disabled="currentPage === 1"><</button>
+      <span class="text-white mx-2">{{ currentPage }} / {{ totalPages }}</span>
+      <button @click="nextPage" :disabled="currentPage === totalPages">></button>
     </div>
+  </div>
 </template>
 
 <script>
 import SongItem from './SongItem.vue'
 import { Icon } from '@iconify/vue';
+import { ref } from 'vue';
 
 export default {
-    name: 'Playlist',
-    components: {
-        SongItem,
-        Icon
-    },
-    props: {
-        songs: Array,
-        currentSong: Object,
-        itemsPerPage: {
-            type: Number,
-            default: 3
-        }
-    },
-    data() {
-        return {
-            currentPage: 1
-        };
-    },
-    computed: {
-        totalPages() {
-            return Math.ceil(this.songs.length / this.itemsPerPage);
-        },
-        paginatedSongs() {
-            const start = (this.currentPage - 1) * this.itemsPerPage;
-            const end = start + this.itemsPerPage;
-            return this.songs.slice(start, end);
-        }
-    },
-    methods: {
-        prevPage() {
-            if (this.currentPage > 1) this.currentPage--;
-        },
-        nextPage() {
-            if (this.currentPage < this.totalPages) this.currentPage++;
-        }
+  name: 'Playlist',
+  components: {
+    SongItem,
+    Icon
+  },
+  props: {
+    songs: Array,
+    currentSong: Object,
+    itemsPerPage: {
+      type: Number,
+      default: 3
     }
+  },
+  setup() {
+    const currentPage = ref(1);
+    return {
+      currentPage
+    };
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.songs.length / this.itemsPerPage);
+    },
+    paginatedSongs() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.songs.slice(start, end);
+    }
+  },
+  methods: {
+    prevPage() {
+      if (this.currentPage > 1) this.currentPage--;
+    },
+    nextPage() {
+      if (this.currentPage < this.totalPages) this.currentPage++;
+    }
+  }
 }
 </script>
 

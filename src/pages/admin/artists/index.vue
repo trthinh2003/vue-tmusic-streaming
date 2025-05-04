@@ -4,83 +4,179 @@
             <div class="col-12 d-flex mb-4">
                 <div class="col-8">
                     <div class="form-group search__artist">
-                        <input type="text" class="form-control search__artist-input" placeholder="Tìm kiếm nghệ sĩ...">
-                        <i class="fa-solid fa-magnifying-glass search__artist-icon"></i>
+                        <input 
+                            type="text" 
+                            class="form-control search__artist-input" 
+                            placeholder="Tìm kiếm nghệ sĩ..." 
+                            v-model="searchQuery"
+                            @keyup.enter="handleSearch"
+                        >
+                        <i class="fa-solid fa-magnifying-glass search__artist-icon" @click="handleSearch"></i>
                     </div>
                 </div>
                 <div class="col-4 d-flex justify-content-end">
-                    <a-button type="primary" class="btn-sm" style="background-color: green;">
+                    <a-button type="primary" class="btn-sm" style="background-color: green;" @click="showModal">
                         <i class="fa-solid fa-plus pe-1"></i><span class="d-none d-sm-inline">Thêm mới</span>
                     </a-button>
                 </div>
             </div>
-            <a-table
-                :columns="columns"
-                :data-source="artists"
-                :pagination="false"
-                :bordered="true"
-                style="overflow-x: scroll;"
-            >
-                <template #bodyCell="{ column, record }">
-                    <template v-if="column.key === 'key'">
-                        {{ artists.indexOf(record) + 1 }}
-                    </template>
-                    <template v-else-if="column.key === 'avatar'">
-                        <img :src="record.avatar" alt="" style="width: 50px; height: 50px; border-radius: 50%;">
-                    </template>
-                    <template v-if="column.key === 'bio'">
-                        {{ $truncateWords(record.bio) }}
-                    </template>
-                    <template v-if="column.key === 'dateOfBirth'">
-                        {{ $formatDate(record.dateOfBirth) }}
-                    </template>
-                    <template v-else-if="column.key === 'action'">
-                        <a-button type="primary" class="btn-sm me-sm-1 mb-1">
-                            <i class="fa-solid fa-eye"></i>
-                        </a-button>
-                        <a-button type="primary" danger class="btn-sm">
-                            <i class="fa-solid fa-trash"></i>
-                        </a-button>
-                    </template>
-                </template>
-            </a-table>
+            <ArtistTable 
+                :columns="columns" 
+                :artists="artists" 
+                :loading="loading" 
+                :pagination="pagination"
+                @update:pagination="pagination = $event" 
+                @fetch-data="fetchArtists" 
+            />
         </div>
+        <ArtistModalCreate 
+            :isModalVisible="isModalVisible" 
+            :newArtist="newArtist" 
+            :previewImage="previewImage"
+            @submit-form="submitForm" 
+            @close-modal="isModalVisible = false" 
+            @handle-file-upload="updateAvatar" 
+        />
     </a-card>
 </template>
 
 <script>
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, onMounted } from 'vue';
 import axiosInstance from '@/configs/axios';
-// import UseModal from '@/components/admin/artists/UseModal.vue';
+import { getArtists, createArtist, searchArtists } from "@/services/artistService";
+import dayjs from 'dayjs';
+import ArtistModalCreate from '@/components/admin/artists/ArtistModalCreate.vue';
+import ArtistTable from '@/components/admin/artists/ArtistTable.vue';
 
 export default defineComponent({
+    components: {
+        ArtistModalCreate,
+        ArtistTable
+    },
     setup() {
         const artists = ref([]);
-        async function getArtists() {
+        const pagination = ref({
+            current: 1,
+            pageSize: 5,
+            total: 0,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng cộng ${total} nghệ sĩ`
+        });
+        const loading = ref(false);
+        const isModalVisible = ref(false);
+        const newArtist = ref({});
+        const previewImage = ref("");
+        const searchQuery = ref("");
+        const isSearching = ref(false);
+
+        const showModal = () => (isModalVisible.value = true);
+        const closeModal = () => (isModalVisible.value = false);
+
+        const updateAvatar = ({ file, preview }) => {
+            newArtist.value.avatar = file;
+            previewImage.value = preview;
+        };
+    
+        const fetchArtists = (page = 1, pageSize = 5) => {
+            if (isSearching.value) return;
+            
+            loading.value = true;
+            getArtists(page, pageSize)
+                .then((res) => {
+                    artists.value = res.data.data;
+                    pagination.value = {
+                        ...pagination.value,
+                        total: res.data.pagination.totalItems,
+                        current: res.data.pagination.currentPage,
+                        pageSize: res.data.pagination.perPage,
+                        showTotal: (total) => `Tổng cộng ${total} nghệ sĩ`,
+                    };
+                })
+                .catch(() => message.error("Không thể lấy dữ liệu"))
+                .finally(() => (loading.value = false));
+        };
+
+        const handleSearch = () => {
+            if (!searchQuery.value.trim()) {
+                isSearching.value = false;
+                fetchArtists();
+                return;
+            }
+            
+            isSearching.value = true;
+            loading.value = true;
+            
+            searchArtists(pagination.value.current, pagination.value.pageSize, searchQuery.value)
+                .then((res) => {
+                    artists.value = res.data.data;
+                    pagination.value = {
+                        ...pagination.value,
+                        total: res.data.pagination.totalItems,
+                        current: res.data.pagination.currentPage,
+                        pageSize: res.data.pagination.perPage,
+                        showTotal: (total) => `Tổng cộng ${total} nghệ sĩ`,
+                    };
+                })
+                .catch(() => message.error("Tìm kiếm thất bại"))
+                .finally(() => (loading.value = false));
+        };
+
+        const handleTableChange = (pagination) => {
+            if (isSearching.value) {
+                handleSearch();
+            } else {
+                fetchArtists(pagination.current, pagination.pageSize);
+            }
+        };
+
+        const submitForm = async (artist) => {
             try {
-                const response = await axiosInstance.get('/artists');
-                if (response.status === 200) {
-                    artists.value = response.data;
-                    console.log(artists.value);
+                const formData = new FormData();
+                formData.append('Name', artist.name);
+                formData.append('Bio', artist.bio);
+                formData.append('DateOfBirth', dayjs(artist.dateOfBirth).format('YYYY-MM-DD'));
+                if (newArtist.value.avatar) {
+                    formData.append('Avatar', newArtist.value.avatar);
                 }
-                console.log(response);
+                
+                const response = await createArtist(formData);
+								message.success(response.data.message)
+                fetchArtists();
+                isModalVisible.value = false;
+                newArtist.value = {};
+                previewImage.value = "";
             } catch (error) {
                 console.log(error);
             }
         }
-        getArtists();
+
+        onMounted(() => {
+            fetchArtists();
+        });
 
         return {
             artists,
             columns: [
-                { title: 'STT', dataIndex: 'key', key: 'key', fixed: 'left' },
+                { title: 'STT', dataIndex: 'id', key: 'id', fixed: 'left', width: 60 },
                 { title: 'Họ tên', dataIndex: 'name', key: 'name' },
-                // { title: 'Số bài hát', dataIndex: 'age', key: 'age', },
-                { title: 'Avatar', dataIndex: 'avatar', key: 'avatar' },
+                { title: 'Avatar', dataIndex: 'avatar', key: 'avatar', align: 'center' },
                 { title: 'Mô tả', dataIndex: 'bio', key: 'bio' },
                 { title: 'Ngày sinh', dataIndex: 'dateOfBirth', key: 'dateOfBirth' },
                 { title: 'Thao tác', key: 'action', fixed: 'right', align: 'center' },
             ],
+            isModalVisible,
+            showModal,
+            closeModal,
+            newArtist,
+            previewImage,
+            updateAvatar,
+            submitForm,
+            fetchArtists,
+            handleTableChange,
+            handleSearch,
+            searchQuery,
+            loading,
+            pagination
         };
     },
 })
@@ -102,15 +198,16 @@ export default defineComponent({
 .search__artist-icon {
     position: absolute;
     top: 30%;
-    right: -10px;
+    right: -5px;
+    cursor: pointer;
 }
 
 @media(max-width: 576px) {
     .search__artist-icon {
-        right: -8px;
+        right: 8px;
     }
     .search__artist-input {
         width: 100%;
     }   
 }
-</style>>
+</style>

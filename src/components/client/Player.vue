@@ -81,6 +81,7 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { message } from 'ant-design-vue'
 import { Icon } from '@iconify/vue';
 import DownloadModal from './DownloadModal.vue';
 
@@ -270,6 +271,7 @@ const toggleFavorite = () => {
     ...props.currentSong,
     isFavorite: !props.currentSong.isFavorite
   };
+	message.error('Chưa có tính năng này nhe ní!');
   emit('update-song', updatedSong);
 	console.log("Song updated:", updatedSong);
   saveFavorites();

@@ -173,7 +173,7 @@
               :src="adminLogo" 
               class="cursor-pointer"
             />
-            <span class="username ms-2">Người dùng</span>
+            <span class="username ms-2">{{ currentUser.username }}</span>
             <i class="fa-solid fa-chevron-down ms-2"></i>
           </div>
           
@@ -272,6 +272,7 @@ import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getSongs } from '@/services/songService'
+import { useProfileStore } from '@/stores/useProfile.js'
 
 import adminLogo from '@/assets/img/admin-logo.png';
 
@@ -361,6 +362,7 @@ const getSongsFromServer = async () => {
 getSongsFromServer();
 
 const songs = ref([...originalPlaylist.value])
+const currentUser = ref({})
 const currentSong = ref(songs.value[0])
 const isPlaying = ref(false)
 const isShuffled = ref(false)
@@ -377,6 +379,8 @@ const currentLyric = ref('');
 const currentAudioTime = ref(0);
 
 const karaokeMode = ref(false);
+
+currentUser.value = useProfileStore().getProfile();
 
 const handleKaraokeToggle = (checked) => {
   // console.log('Karaoke mode:', checked);
@@ -540,6 +544,10 @@ const prevSong = () => {
   currentSong.value = filteredSongs.value[prevIndex]
   isPlaying.value = true
 }
+
+// onMounted(() => {
+//   currentUser.value = JSON.parse(localStorage.getItem('user'))
+// })
 
 // Theo dõi thay đổi shuffle
 watch(isShuffled, (newVal) => {

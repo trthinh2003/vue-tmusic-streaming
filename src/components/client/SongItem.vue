@@ -24,7 +24,7 @@ export default {
     display: flex;
     align-items: center;
     padding: 3px;
-    margin: 5px 0 0 -40px;
+    margin: 5px 0 0 0;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s;

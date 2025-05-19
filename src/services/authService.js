@@ -33,10 +33,12 @@ export async function refreshToken() {
 }
 
 export function startRefreshTokenTimer() {
+  console.log('Start refresh token timer...');
   if (refreshTokenInterval) clearInterval(refreshTokenInterval);
 
   refreshTokenInterval = setInterval(() => {
     refreshToken();
+    console.log('Refresh token every 25 minutes!');
   }, 25 * 60 * 1000); // 25 phút gọi lên lấy token duy trì login
 }
 

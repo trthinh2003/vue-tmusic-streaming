@@ -8,16 +8,12 @@
 				<h2>{{ currentSong.title }}</h2>
 				<p>{{ currentSong.artist }}</p>
 			</div>
-			<button class="download-btn position-absolute" @click.stop="downloadSong(song)" style="top:0; right:0;">
+			<button class="download-btn position-absolute" @click.stop="showDownloadModal" style="top:0; right:0;">
 				<i class="fa-solid fa-download"></i>
 			</button>
-			<!-- Thêm nút lyric -->
-			<button 
-				@click="toggleLyrics" 
-				:class="{ active: isLyricsVisible, 'lyrics-btn': true }" 
-				title="Hiển thị lyric"
-			>
-				<i class="fa-solid fa-file-lines"></i>
+			<!-- Thêm nút tym -->
+			<button class="favorite-btn position-absolute" @click.stop="toggleFavorite" :class="{ 'is-favorite': currentSong.isFavorite }" title="Yêu thích">
+				<i class="fa-solid fa-heart"></i>
 			</button>
 		</div>
 
@@ -72,15 +68,25 @@
 		<audio ref="audioPlayer" :src="currentSong.audio" @ended="handleSongEnd" @timeupdate="updateProgress"
 			@loadedmetadata="updateDuration" @volumechange="updateVolume">
 		</audio>
+
+		<!-- Modal tải xuống -->
+		<DownloadModal 
+			:is-visible="isDownloadModalVisible" 
+			:song="currentSong"
+			@close="closeDownloadModal"
+			@download="handleDownload"
+		/>
 	</div>
 </template>
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue';
+import DownloadModal from './DownloadModal.vue';
 
 component: {
-	Icon
+	Icon,
+	DownloadModal
 }
 
 const props = defineProps({
@@ -95,7 +101,8 @@ const emit = defineEmits([
 	'prev-song',
 	'update-shuffle',
 	'update-playlist',
-	'timeupdate'
+	'timeupdate',
+	'update-song'
 ])
 
 const audioPlayer = ref(null)
@@ -106,7 +113,8 @@ const progressPercentage = ref(0)
 const volume = ref(0.7)
 const isLooping = ref(false)
 const isShuffled = ref(false)
-const isLyricsVisible = ref(false) 
+const isLyricsVisible = ref(false)
+const isDownloadModalVisible = ref(false)
 
 // Format thời gian (phút:giây)
 const formatTime = (time) => {
@@ -136,9 +144,39 @@ const seekAudio = (e) => {
 	audioPlayer.value.currentTime = (percentage / 100) * duration.value
 }
 
-//Download bài hát
-const downloadSong = (song) => {
-  console.log(song);
+// Hiển thị modal tải xuống
+const showDownloadModal = () => {
+	isDownloadModalVisible.value = true
+}
+
+// Đóng modal tải xuống
+const closeDownloadModal = () => {
+	isDownloadModalVisible.value = false
+}
+
+// Xử lý tải bài hát với chất lượng được chọn
+const handleDownload = (downloadInfo) => {
+	const { song, quality } = downloadInfo
+	
+	// Tạo tên file gồm tên bài hát và nghệ sĩ
+	const fileName = `${song.title} - ${song.artist} (${quality}).mp3`
+	
+	// Giả lập việc tải file với chất lượng khác nhau
+	let downloadUrl = song.audio
+	
+	// Trong thực tế, server sẽ xử lý việc chuyển đổi định dạng và chất lượng
+	// Ở đây chúng ta giả lập bằng cách dùng URL gốc
+	
+	// Tạo một thẻ a ẩn để tải file
+	const downloadLink = document.createElement('a')
+	downloadLink.href = downloadUrl
+	downloadLink.download = fileName
+	document.body.appendChild(downloadLink)
+	downloadLink.click()
+	document.body.removeChild(downloadLink)
+	
+	// Hiển thị thông báo thành công (có thể thêm toast notification ở đây)
+	console.log(`Đang tải xuống: ${fileName}`)
 }
 
 // Tua nhanh 10 giây
@@ -226,10 +264,32 @@ watch(() => props.currentSong, () => {
 	}
 })
 
-// Hàm bật/tắt lyric
-const toggleLyrics = () => {
-	isLyricsVisible.value = !isLyricsVisible.value
-}
+// Hàm cho phép người dùng thả tym
+const toggleFavorite = () => {
+  const updatedSong = {
+    ...props.currentSong,
+    isFavorite: !props.currentSong.isFavorite
+  };
+  emit('update-song', updatedSong);
+	console.log("Song updated:", updatedSong);
+  saveFavorites();
+};
+
+const saveFavorites = () => {
+  if (props.playlist) {
+    const favorites = props.playlist.filter(song => song.isFavorite);
+    localStorage.setItem('favoriteSongs', JSON.stringify(favorites));
+  }
+};
+
+// Load favorites when component mounts
+onMounted(() => {
+  const savedFavorites = localStorage.getItem('favoriteSongs');
+  if (savedFavorites) {
+    const favorites = JSON.parse(savedFavorites);
+    // You might want to update your playlist here based on saved favorites
+  }
+});
 
 const seekTo = (time) => {
   if (audioPlayer.value) {
@@ -476,9 +536,17 @@ defineExpose({
 	font-size: 1.2rem;
 	cursor: pointer;
 	border-radius: 50%;
+	padding: 8px;
+	transition: all 0.2s;
 }
 
-.lyrics-btn {
+.download-btn:hover {
+	color: #f8f9fa;
+	background: rgba(76, 201, 240, 0.2);
+	transform: scale(1.1);
+}
+
+/* .lyrics-btn {
 	position: absolute;
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid rgba(255, 255, 255, 0.1);
@@ -489,6 +557,39 @@ defineExpose({
 	border-radius: 50%;
 	top: 0;
 	left: 0;
+	padding: 8px;
+	transition: all 0.2s;
+}
+
+.lyrics-btn:hover {
+	background: rgba(255, 255, 255, 0.1);
+} */
+
+.favorite-btn {
+	top: 0;
+	left: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.favorite-btn:hover {
+  color: #ff6b6b;
+  transform: scale(1.1);
+}
+
+.favorite-btn.is-favorite {
+  color: #ff6b6b;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.7);
+}
+
+.favorite-btn.is-favorite:hover {
+  color: #ff8787;
 }
 
 @media (max-width: 576px) {

@@ -16,8 +16,13 @@
 				<a-col :span="12">
 					<a-form-item label="Avatar">
 						<div class="upload-container text-center">
-							<a-upload v-model:file-list="fileList" list-type="picture-card" class="avatar-uploader"
-								:show-upload-list="false" :before-upload="beforeUpload" @change="handleFileUpload">
+							<a-upload 
+								v-model:file-list="fileList" 
+								list-type="picture-card" 
+								class="avatar-uploader"
+								:show-upload-list="false" 
+								:before-upload="beforeUpload" 
+								@change="handleFileUpload">
 								<img v-if="previewImage" :src="previewImage" alt="Avatar" class="avatar-preview" />
 								<div v-else class="upload-placeholder">
 									<plus-outlined class="text-dark"/>
@@ -73,7 +78,7 @@ export default defineComponent({
 		});
 
 		const beforeUpload = () => {
-			return false; // Prevent automatic upload
+			return false;
 		};
 
 		const handleFileUpload = (info) => {
@@ -150,6 +155,13 @@ export default defineComponent({
 
 .avatar-uploader :deep(.ant-upload.ant-upload-select-picture-card:hover) {
 	border-color: #fc00ff;
+}
+
+@media (max-width: 576px) {
+	.avatar-uploader :deep(.ant-upload.ant-upload-select-picture-card) {
+		width: 150px;
+		height: 150px;
+	}
 }
 </style>
 

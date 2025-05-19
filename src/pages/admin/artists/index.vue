@@ -42,7 +42,6 @@
 
 <script>
 import { defineComponent, ref, onMounted } from 'vue';
-import axiosInstance from '@/configs/axios';
 import { getArtists, createArtist, searchArtists } from "@/services/artistService";
 import dayjs from 'dayjs';
 import ArtistModalCreate from '@/components/admin/artists/ArtistModalCreate.vue';
@@ -75,6 +74,7 @@ export default defineComponent({
         const updateAvatar = ({ file, preview }) => {
             newArtist.value.avatar = file;
             previewImage.value = preview;
+            console.log(newArtist.value);
         };
     
         const fetchArtists = (page = 1, pageSize = 5) => {
@@ -140,7 +140,7 @@ export default defineComponent({
                 }
                 
                 const response = await createArtist(formData);
-								message.success(response.data.message)
+				message.success(response.data.message)
                 fetchArtists();
                 isModalVisible.value = false;
                 newArtist.value = {};
@@ -162,7 +162,7 @@ export default defineComponent({
                 { title: 'Avatar', dataIndex: 'avatar', key: 'avatar', align: 'center' },
                 { title: 'Mô tả', dataIndex: 'bio', key: 'bio' },
                 { title: 'Ngày sinh', dataIndex: 'dateOfBirth', key: 'dateOfBirth' },
-                { title: 'Thao tác', key: 'action', fixed: 'right', align: 'center' },
+                { title: 'Thao tác', key: 'action', fixed: 'right', align: 'center', className: 'ant-table-cell-action' },
             ],
             isModalVisible,
             showModal,
@@ -207,6 +207,7 @@ export default defineComponent({
         right: 8px;
     }
     .search__artist-input {
+        padding: 8px 2px;
         width: 100%;
     }   
 }

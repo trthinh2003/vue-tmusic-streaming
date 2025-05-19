@@ -23,19 +23,25 @@
                     {{ record.artist?.name || 'Không xác định' }}
                 </template>
 				<template v-if="column.key === 'action'">
-					<div class="d-flex flex-column flex-sm-row align-items-center justify-content-center">
-						<a-button class="me-1 mb-sm-0 mb-1 " @click="showEdit(record)">
-							<i class="fa-solid fa-pen"></i>
-						</a-button>
-						<a-button type="primary" class="me-1 mb-sm-0 mb-1" @click="showDetail(record)">
-							<i class="fa-solid fa-eye"></i>
-						</a-button>
-						<a-popconfirm title="Bạn có chắc muốn xóa album này?" ok-text="Yes" cancel-text="No"
-							@confirm="confirmDelete(record.id)" @cancel="cancelDelete(record.id)">
-							<a-button type="primary" danger>
-								<i class="fa-solid fa-trash-can"></i>
+					<div class="action-buttons d-flex justify-content-center align-items-center gap-2 flex-wrap">
+						<a-tooltip title="Chỉnh sửa">
+							<a-button shape="circle" type="default" @click="showEdit(record)" class="action-btn edit-btn">
+								<i class="fa-solid fa-pen-to-square"></i>
 							</a-button>
-						</a-popconfirm>
+						</a-tooltip>
+						<a-tooltip title="Xem chi tiết">
+							<a-button shape="circle" class="me-1 mb-sm-0 mb-1" @click="showDetail(record)" style="color: #000">
+								<i class="fa-solid fa-eye"></i>
+							</a-button>
+						</a-tooltip>
+						<a-tooltip title="Xóa nghệ sĩ">
+							<a-popconfirm title="Bạn có chắc muốn xóa bài hát này?" ok-text="Xác nhận" cancel-text="Hủy"
+								@confirm="confirmDelete(record.id)" @cancel="cancelDelete(record.id)">
+								<a-button shape="circle" type="primary" danger class="action-btn delete-btn">
+									<i class="fa-solid fa-trash-can"></i>
+								</a-button>
+							</a-popconfirm>
+						</a-tooltip>
 					</div>
 				</template>
 			</template>
@@ -55,7 +61,7 @@ const columns = ref([
     { title: 'Năm phát hành', dataIndex: 'releaseDate', key: 'releaseDate', align: 'center', width: 120},
 	{ title: 'Số bài hát', dataIndex: 'songCount', key: 'songCount', align: 'center', width: 120},
     { title: 'Nghệ sĩ', key: 'artist', align: 'center', width: 150 },
-    { title: 'Thao tác', key: 'action', fixed: 'right', align: 'center', width: 150},
+    { title: 'Thao tác', key: 'action', fixed: 'right', align: 'center', className: 'ant-table-cell-action' },
 ]);
 
 const displayAlbums = async () => {
@@ -70,10 +76,4 @@ const displayAlbums = async () => {
 displayAlbums();
 </script>
 
-<style scoped>
-:deep(.ant-table-thead > tr > th) {
-  background-color: #f5f5f5;
-	text-align: center;
-  font-weight: bold;
-}
-</style>
+<style scoped src="@/assets/admin/css/table-custom.css"></style>

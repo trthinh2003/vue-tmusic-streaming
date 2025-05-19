@@ -180,6 +180,13 @@ export default defineComponent({
 .avatar-uploader :deep(.ant-upload.ant-upload-select-picture-card:hover) {
 	border-color: #fc00ff;
 }
+
+@media (max-width: 576px) {
+	.avatar-uploader :deep(.ant-upload.ant-upload-select-picture-card) {
+		width: 150px;
+		height: 150px;
+	}
+}
 </style>
 
 <style scoped>

@@ -54,7 +54,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // Kiểm tra quyền truy cập theo role
-  const userRole = profileStore.profile.role; // role có thể là "admin", "employee", "customer"...
+  const userRole = profileStore.profile.role; // role có thể là "admin", "user"
   if (to.meta.roles && !to.meta.roles.includes(userRole)) {
     // await Swal.fire({
     //   title: "Bạn không có quyền truy cập!",
@@ -67,5 +67,14 @@ router.beforeEach(async (to, from, next) => {
 
   next();
 });
+// router.afterEach((to, from) => {
+//   const routesNeedReload = ['/dashboard', '/explore']
+
+//   if (routesNeedReload.includes(to.path)) {
+//     setTimeout(() => {
+//       window.location.reload()
+//     }, 100)
+//   }
+// })
 
 export default router;

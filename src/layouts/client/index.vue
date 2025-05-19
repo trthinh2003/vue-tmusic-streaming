@@ -5,21 +5,38 @@
       <a-button type="text" @click="showDrawer">
         <i class="fa-solid fa-bars"></i>
       </a-button>
+
       <div class="ms-4">
         <i class="fa-solid fa-music me-1"></i>
         <p class="d-inline"><span class="text-white">TMusic</span>Streaming</p>
       </div>
-      <a-button 
-        type="text" 
-        class="logout-btn"
-        @click="handleLogout"
-        style="text-align: end;"
-      >
-        <template #icon>
-          <i class="fa-solid fa-right-from-bracket me-1"></i>
+      
+      <!-- Avatar mobile -->
+      <a-dropdown :trigger="['click']" placement="bottomRight">
+        <a-avatar 
+          :size="36" 
+          src="require('@/assets/img/admin-logo.png')" 
+          class="cursor-pointer"
+        />
+        
+        <template #overlay>
+          <a-menu>
+            <a-menu-item key="profile">
+              <i class="fa-solid fa-user me-2"></i>
+              Hồ sơ
+            </a-menu-item>
+            <a-menu-item key="settings">
+              <i class="fa-solid fa-gear me-2"></i>
+              Cài đặt
+            </a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="logout" @click="handleLogout">
+              <i class="fa-solid fa-right-from-bracket me-2"></i>
+              Đăng xuất
+            </a-menu-item>
+          </a-menu>
         </template>
-        <span>Đăng xuất</span>
-      </a-button>
+      </a-dropdown>
     </div>
 
     <!-- Drawer cho mobile -->
@@ -30,6 +47,20 @@
       :width="300"
       :body-style="{ padding: 0 }"
     >
+      <template #title>
+        <div class="drawer-header-container">
+          <span></span>
+          <a-button 
+            type="text" 
+            @click="goToExplore"
+            class="explore-drawer-btn"
+          >
+            <Icon icon="mdi:compass-outline" />
+            <span class="explore-text">Khám phá</span>
+          </a-button>
+        </div>
+      </template>
+
       <div class="sidebar h-100">
         <h1><span class="text-white">TMusic</span>Streaming</h1>
         <div class="search p-3">
@@ -122,32 +153,62 @@
 
     <!-- Main content -->
     <div class="d-flex flex-column justify-content-center align-items-center w-100">
-      <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-4">
+      <!-- Main header cho desktop -->
+      <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-3 px-4">
         <h1><span class="text-white">TMusic</span>Streaming</h1>
-        <div>
-          <a-button 
-            type="text" 
-            class="logout-btn"
-            @click="handleLogout"
-          >
-            <template #icon>
-              <i class="fa-solid fa-right-from-bracket me-1"></i>
-            </template>
-            <span>Đăng xuất</span>
-          </a-button>
-        </div>
+
+        <a-button 
+          type="text" 
+          @click="goToExplore"
+          class="explore-header-btn ms-4"
+        >
+          <Icon icon="mdi:compass-outline" class="me-2" />
+          Khám phá
+        </a-button>
+
+        <a-dropdown :trigger="['click']" placement="bottomRight">
+          <div class="user-avatar">
+            <a-avatar 
+              :size="40" 
+              :src="adminLogo" 
+              class="cursor-pointer"
+            />
+            <span class="username ms-2">Người dùng</span>
+            <i class="fa-solid fa-chevron-down ms-2"></i>
+          </div>
+          
+          <template #overlay>
+            <a-menu>
+              <a-menu-item key="profile">
+                <i class="fa-solid fa-user me-2 text-white"></i>
+                <span class="text-white">Hồ sơ</span>
+              </a-menu-item>
+              <a-menu-item key="settings">
+                <i class="fa-solid fa-gear me-2 text-white"></i>
+                <span class="text-white">Cài đặt</span>
+              </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item key="logout" @click="handleLogout">
+                <i class="fa-solid fa-right-from-bracket me-2 text-white"></i>
+                <span class="text-white">Đăng xuất</span>
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
       </div>
       <div class="main-content">
         <player 
+          v-if="currentSong"
           ref="playerRef"
           :current-song="currentSong"
           :is-playing="isPlaying"
-          :playlist="filteredSongs"
+          :playlist="filteredSongs.length > 0 ? filteredSongs : songs"
           @toggle-play="togglePlay"
           @next-song="nextSong"
           @prev-song="prevSong"
           @update-shuffle="handleShuffleUpdate"
           @timeupdate="updateAudioTime"
+          :is-shuffled="isShuffled"
         />
       </div>
     </div>
@@ -164,8 +225,10 @@
   </a-button>
   <a-drawer 
     class="lyric-drawer-right" 
-    :width="500" title="Lời bài hát" 
+    :width="500" 
+    title="Lời bài hát & Bình luận"
     placement="right" 
+    :header-style="{ background: 'rgba(26, 26, 46, 0.9)' }"
     :open="openRightDrawer" 
     @close="onCloseRightDrawer"
     :style="{ 
@@ -173,20 +236,27 @@
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        width: '75%',
+        width: '70%',
         marginLeft: 'auto',
       }"
   >
     <template #extra>
-      <a-button style="margin-right: 8px" @click="onCloseRightDrawer">x</a-button>
+      <div style="margin-right: 8px;">
+        <a-switch
+          v-model:checked="karaokeMode"
+          checked-children="Karaoke"
+          un-checked-children="Thường"
+          @change="handleKaraokeToggle"
+        />
+      </div> 
     </template>
-    <LyricDisplay 
-      v-if="currentLyric" 
-      :lyrics="currentLyric" 
-      :current-time="currentAudioTime" 
-      @seek="handleSeek"
-     />
-    <p v-else>Không có lời bài hát</p>
+    <LyricWithComments
+      :current-lyric="currentLyric"
+      :current-audio-time="currentAudioTime"
+      :current-song="currentSong"
+      :karaoke-mode="karaokeMode"
+      @seek-lyric="handleSeek"
+    />
   </a-drawer>
 </template>
 
@@ -195,84 +265,108 @@ import { ref, onMounted, watch, computed } from 'vue'
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
 import FilterModal from '@/components/client/FilterModal.vue'
-import LyricDisplay from '@/components/client/LyricDisplay.vue'
+import LyricWithComments from '@/components/client/LyricWithComments.vue'
 import { Button, Drawer, Input } from 'ant-design-vue'
+import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { getSongs } from '@/services/songService'
+
+import adminLogo from '@/assets/img/admin-logo.png';
 
 // Import các file assets
-import cover1 from '@/assets/client/covers/cover1.jpg'
-import cover2 from '@/assets/client/covers/cover2.jpg'
-import cover3 from '@/assets/client/covers/cover3.jpg'
-import cover4 from '@/assets/client/covers/cover4.jpg'
-import cover5 from '@/assets/client/covers/cover5.jpg'
-import cover6 from '@/assets/client/covers/cover6.jpg'
-import cover7 from '@/assets/client/covers/cover7.jpg'
-import cover8 from '@/assets/client/covers/cover8.jpg'
-import cover9 from '@/assets/client/covers/cover9.jpg'
-import cover10 from '@/assets/client/covers/cover10.jpg'
-import cover11 from '@/assets/client/covers/cover11.jpg'
-import cover12 from '@/assets/client/covers/cover12.jpg'
-import song1 from '@/assets/client/songs/song1.mp3'
-import song2 from '@/assets/client/songs/song2.mp3'
-import song3 from '@/assets/client/songs/song3.mp3'
-import song4 from '@/assets/client/songs/song4.mp3'
-import song5 from '@/assets/client/songs/song5.mp3'
-import song6 from '@/assets/client/songs/song6.mp3'
-import song7 from '@/assets/client/songs/song7.mp3'
-import song8 from '@/assets/client/songs/song8.mp3'
-import song9 from '@/assets/client/songs/song9.mp3'
-import song10 from '@/assets/client/songs/song10.mp3'
-import song11 from '@/assets/client/songs/song11.mp3'
-import song12 from '@/assets/client/songs/song12.mp3'
-import bg1 from '@/assets/client/backgrounds/bg-song1.jpg'
-import bg2 from '@/assets/client/backgrounds/bg-song2.jpg'
-import bg3 from '@/assets/client/backgrounds/bg-song3.jpg'
-import bg4 from '@/assets/client/backgrounds/bg-song4.jpg'
-import bg5 from '@/assets/client/backgrounds/bg-song5.jpg'
-import bg6 from '@/assets/client/backgrounds/bg-song6.jpg'
-import bg7 from '@/assets/client/backgrounds/bg-song7.jpg'
-import bg8 from '@/assets/client/backgrounds/bg-song8.jpg'
-import bg9 from '@/assets/client/backgrounds/bg-song9.jpg'
-import bg10 from '@/assets/client/backgrounds/bg-song10.jpg'
-import bg11 from '@/assets/client/backgrounds/bg-song11.jpg'
-import bg12 from '@/assets/client/backgrounds/bg-song12.jpg'
-import lyric1 from '@/assets/client/lyrics/lyric1.lrc'
-import lyric2 from '@/assets/client/lyrics/lyric2.lrc'
-import lyric3 from '@/assets/client/lyrics/lyric3.lrc'
-import lyric4 from '@/assets/client/lyrics/lyric4.lrc'
-import lyric5 from '@/assets/client/lyrics/lyric5.lrc'
-import lyric6 from '@/assets/client/lyrics/lyric6.lrc'
-import lyric7 from '@/assets/client/lyrics/lyric7.lrc'
-import lyric8 from '@/assets/client/lyrics/lyric8.lrc'
-import lyric9 from '@/assets/client/lyrics/lyric9.lrc'
-import lyric10 from '@/assets/client/lyrics/lyric10.lrc'
-import lyric11 from '@/assets/client/lyrics/lyric11.lrc'
-import lyric12 from '@/assets/client/lyrics/lyric12.lrc'
+// import cover1 from '@/assets/client/covers/cover1.jpg'
+// import cover2 from '@/assets/client/covers/cover2.jpg'
+// import cover3 from '@/assets/client/covers/cover3.jpg'
+// import cover4 from '@/assets/client/covers/cover4.jpg'
+// import cover5 from '@/assets/client/covers/cover5.jpg'
+// import cover6 from '@/assets/client/covers/cover6.jpg'
+// import cover7 from '@/assets/client/covers/cover7.jpg'
+// import cover8 from '@/assets/client/covers/cover8.jpg'
+// import cover9 from '@/assets/client/covers/cover9.jpg'
+// import cover10 from '@/assets/client/covers/cover10.jpg'
+// import cover11 from '@/assets/client/covers/cover11.jpg'
+// import cover12 from '@/assets/client/covers/cover12.jpg'
+// import song1 from '@/assets/client/songs/song1.mp3'
+// import song2 from '@/assets/client/songs/song2.mp3'
+// import song3 from '@/assets/client/songs/song3.mp3'
+// import song4 from '@/assets/client/songs/song4.mp3'
+// import song5 from '@/assets/client/songs/song5.mp3'
+// import song6 from '@/assets/client/songs/song6.mp3'
+// import song7 from '@/assets/client/songs/song7.mp3'
+// import song8 from '@/assets/client/songs/song8.mp3'
+// import song9 from '@/assets/client/songs/song9.mp3'
+// import song10 from '@/assets/client/songs/song10.mp3'
+// import song11 from '@/assets/client/songs/song11.mp3'
+// import song12 from '@/assets/client/songs/song12.mp3'
+// import bg1 from '@/assets/client/backgrounds/bg-song1.jpg'
+// import bg2 from '@/assets/client/backgrounds/bg-song2.jpg'
+// import bg3 from '@/assets/client/backgrounds/bg-song3.jpg'
+// import bg4 from '@/assets/client/backgrounds/bg-song4.jpg'
+// import bg5 from '@/assets/client/backgrounds/bg-song5.jpg'
+// import bg6 from '@/assets/client/backgrounds/bg-song6.jpg'
+// import bg7 from '@/assets/client/backgrounds/bg-song7.jpg'
+// import bg8 from '@/assets/client/backgrounds/bg-song8.jpg'
+// import bg9 from '@/assets/client/backgrounds/bg-song9.jpg'
+// import bg10 from '@/assets/client/backgrounds/bg-song10.jpg'
+// import bg11 from '@/assets/client/backgrounds/bg-song11.jpg'
+// import bg12 from '@/assets/client/backgrounds/bg-song12.jpg'
+// import lyric1 from '@/assets/client/lyrics/lyric1.lrc'
+// import lyric2 from '@/assets/client/lyrics/lyric2.lrc'
+// import lyric3 from '@/assets/client/lyrics/lyric3.lrc'
+// import lyric4 from '@/assets/client/lyrics/lyric4.lrc'
+// import lyric5 from '@/assets/client/lyrics/lyric5.lrc'
+// import lyric6 from '@/assets/client/lyrics/lyric6.lrc'
+// import lyric7 from '@/assets/client/lyrics/lyric7.lrc'
+// import lyric8 from '@/assets/client/lyrics/lyric8.lrc'
+// import lyric9 from '@/assets/client/lyrics/lyric9.lrc'
+// import lyric10 from '@/assets/client/lyrics/lyric10.lrc'
+// import lyric11 from '@/assets/client/lyrics/lyric11.lrc'
+// import lyric12 from '@/assets/client/lyrics/lyric12.lrc'
 
-const originalPlaylist = [
-  { id: 1, title: "The World Hasn't Even Started Yet", artist: "WxS", genre: "Pop", cover: cover1, audio: song1, duration: '2:01', background: bg1, lyric: lyric1 },
-  { id: 2, title: "Composing The Future", artist: "25-ji, Nightcord de", genre: "Jazz", cover: cover2, audio: song2, duration: '3:50', background: bg2, lyric: lyric2 },
-  { id: 3, title: "Bad Apple!!", artist: "25-ji, Nightcord de", genre: "Pop", cover: cover3, audio: song3, duration: '3:49', background: bg3, lyric: lyric3 },
-  { id: 4, title: "Starry Sky Melody/星空のメロディ", artist: "Kusanagi Nene (WxS)", genre: "Pop", cover: cover4, audio: song4, duration: '1:48', background: bg4, lyric: lyric4 },
-  { id: 5, title: "Mặt Trái Của Sự Thật", artist: "HKT", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32', background: bg5, lyric: lyric5 },
-  { id: 6, title: "Senbonzakura", artist: "Hatsune Miku", genre: "Pop", cover: cover6, audio: song6, duration: '4:04', background: bg6, lyric: lyric6 },
-  { id: 7, title: "Em Của Ngày Hôm Qua", artist: "Sơn Tùng M-TP", genre: "Pop", cover: cover7, audio: song7, duration: '3:52', background: bg7, lyric: lyric7 },
-  { id: 8, title: "Blue Bird", artist: "Ikimonogakari", genre: "Pop", cover: cover8, audio: song8, duration: '3:32', background: bg8, lyric: lyric8 },
-  { id: 9, title: "Sakayume (Jujutsu Kaisen 0)", artist: "King Gnu", genre: "Pop", cover: cover9, audio: song9, duration: '5:07', background: bg9, lyric: lyric9 },
-  { id: 10, title: "Hazy Moon", artist: "Hatsune Miku", genre: "Pop", cover: cover10, audio: song10, duration: '4:15', background: bg10, lyric: lyric10 },
-  { id: 11, title: "Yoru Ni Kakeru / 夜に駆ける", artist: "YOASOBI", genre: "Pop", cover: cover11, audio: song11, duration: '4:18', background: bg11, lyric: lyric11 },
-  { id: 122, title: "Yume Wo Kanaete Doraemon", artist: "MAO", genre: "Pop", cover: cover12, audio: song12, duration: '4:01', background: bg12, lyric: lyric12 },
-]
+// const originalPlaylist = [
+//   { id: 1, title: "The World Hasn't Even Started Yet", artist: "WxS", genre: "Pop", cover: cover1, audio: song1, duration: '2:01', background: bg1, lyric: lyric1 },
+//   { id: 2, title: "Composing The Future", artist: "25-ji, Nightcord de", genre: "Jazz", cover: cover2, audio: song2, duration: '3:50', background: bg2, lyric: lyric2 },
+//   { id: 3, title: "Bad Apple!!", artist: "25-ji, Nightcord de", genre: "Pop", cover: cover3, audio: song3, duration: '3:49', background: bg3, lyric: lyric3 },
+//   { id: 4, title: "Starry Sky Melody/星空のメロディ", artist: "Kusanagi Nene (WxS)", genre: "Pop", cover: cover4, audio: song4, duration: '1:48', background: bg4, lyric: lyric4 },
+//   { id: 5, title: "Mặt Trái Của Sự Thật", artist: "HKT", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32', background: bg5, lyric: lyric5 },
+//   { id: 6, title: "Senbonzakura", artist: "Hatsune Miku", genre: "Pop", cover: cover6, audio: song6, duration: '4:04', background: bg6, lyric: lyric6 },
+//   { id: 7, title: "Em Của Ngày Hôm Qua", artist: "Sơn Tùng M-TP", genre: "Pop", cover: cover7, audio: song7, duration: '3:52', background: bg7, lyric: lyric7 },
+//   { id: 8, title: "Blue Bird", artist: "Ikimonogakari", genre: "Pop", cover: cover8, audio: song8, duration: '3:32', background: bg8, lyric: lyric8 },
+//   { id: 9, title: "Sakayume (Jujutsu Kaisen 0)", artist: "King Gnu", genre: "Pop", cover: cover9, audio: song9, duration: '5:07', background: bg9, lyric: lyric9 },
+//   { id: 10, title: "Hazy Moon", artist: "Hatsune Miku", genre: "Pop", cover: cover10, audio: song10, duration: '4:15', background: bg10, lyric: lyric10 },
+//   { id: 11, title: "Yoru Ni Kakeru / 夜に駆ける", artist: "YOASOBI", genre: "Pop", cover: cover11, audio: song11, duration: '4:18', background: bg11, lyric: lyric11 },
+//   { id: 122, title: "Yume Wo Kanaete Doraemon", artist: "MAO", genre: "Pop", cover: cover12, audio: song12, duration: '4:01', background: bg12, lyric: lyric12 },
+// ]
 
-const songs = ref([...originalPlaylist])
+const originalPlaylist = ref([]);
+
+const getSongsFromServer = async () => {
+  try {
+    const response = await getSongs();
+    originalPlaylist.value = response.data.data.map(song => ({
+      ...song,
+      isFavorite: false
+    }));
+    songs.value = [...originalPlaylist.value];
+    currentSong.value = songs.value[0];
+    // Thêm console.log để debug nếu cần
+    console.log('Songs loaded:', songs.value);
+  } catch (error) {
+    console.error('Error loading songs:', error);
+    message.error('Không thể tải danh sách bài hát');
+  }
+}
+getSongsFromServer();
+
+const songs = ref([...originalPlaylist.value])
 const currentSong = ref(songs.value[0])
 const isPlaying = ref(false)
 const isShuffled = ref(false)
-const visible = ref(false) // State điều khiển Drawer
-const showMobileSearch = ref(false) // State hiển thị thanh tìm kiếm mobile
-const searchQuery = ref('') // Từ khóa tìm kiếm
+const visible = ref(false)
+const showMobileSearch = ref(false) 
+const searchQuery = ref('')
 const router = useRouter()
 const visibleModalFilter = ref(false);
 const filters = ref({ songName: '', artistName: '', genre: '' });
@@ -281,6 +375,14 @@ const openRightDrawer = ref(false)
 
 const currentLyric = ref('');
 const currentAudioTime = ref(0);
+
+const karaokeMode = ref(false);
+
+const handleKaraokeToggle = (checked) => {
+  // console.log('Karaoke mode:', checked);
+  karaokeMode.value = checked;
+  // Tùy nhu cầu, có thể emit ra ngoài hoặc truyền cho LyricDisplay
+};
 
 const applyFilter = () => {
   // Nếu không có bộ lọc nào, khôi phục danh sách gốc
@@ -370,31 +472,44 @@ const handleSearch = () => {
 
 // Trộn bài
 const shufflePlaylist = () => {
-  const shuffled = [...originalPlaylist]
+  const shuffled = [...filteredSongs.value.length > 0 ? filteredSongs.value : songs.value];
+  
+  // Thuật toán Fisher-Yates
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  songs.value = shuffled
+  
+  songs.value = shuffled;
   
   // Đảm bảo bài hát hiện tại vẫn trong playlist
   if (!shuffled.some(song => song.id === currentSong.value.id)) {
-    currentSong.value = shuffled[0]
+    currentSong.value = shuffled[0];
+    isPlaying.value = true;
   }
 }
 
 // Khôi phục playlist gốc
 const restorePlaylist = () => {
-  songs.value = [...originalPlaylist]
+  songs.value = [...originalPlaylist.value];
+  // Nếu đang áp dụng bộ lọc, cần giữ nguyên trạng thái filter
+  if (hasActiveFilters.value) {
+    applyFilter();
+  }
 }
 
 // Xử lý khi bật/tắt shuffle
 const handleShuffleUpdate = (shuffleStatus) => {
-  isShuffled.value = shuffleStatus
+  isShuffled.value = shuffleStatus;
   if (shuffleStatus) {
-    shufflePlaylist()
+    shufflePlaylist();
   } else {
-    restorePlaylist()
+    restorePlaylist();
+  }
+  
+  // Đảm bảo UI cập nhật
+  if (filteredSongs.value.length > 0 && !filteredSongs.value.some(s => s.id === currentSong.value.id)) {
+    currentSong.value = filteredSongs.value[0];
   }
 }
 
@@ -426,10 +541,6 @@ const prevSong = () => {
   isPlaying.value = true
 }
 
-onMounted(() => {
-  currentSong.value = songs.value[0]
-})
-
 // Theo dõi thay đổi shuffle
 watch(isShuffled, (newVal) => {
   if (newVal) {
@@ -439,22 +550,32 @@ watch(isShuffled, (newVal) => {
   }
 })
 
-// Theo dõi thay đổi bài hát
-watch(() => currentSong.value, async (newSong) => {
-  if (newSong.lyric) {
-    try {
-      // Giả sử lyric là một file được import
-      if (typeof newSong.lyric === 'string') {
-        const response = await fetch(newSong.lyric);
-        currentLyric.value = await response.text();
-      } else {
-        currentLyric.value = newSong.lyric;
-      }
-    } catch (error) {
-      console.error('Error loading lyric:', error);
-      currentLyric.value = '';
+watch(originalPlaylist, (newVal) => {
+  if (newVal.length > 0) {
+    songs.value = [...newVal];
+    if (!currentSong.value) {
+      currentSong.value = newVal[0];
     }
-  } else {
+  }
+}, { deep: true });
+
+// Theo dõi thay đổi bài hát
+watch(currentSong, async (newSong) => {
+  // Kiểm tra null hoặc undefined
+  if (!newSong || !newSong.lyric) {
+    currentLyric.value = '';
+    return;
+  }
+
+  try {
+    if (typeof newSong.lyric === 'string') {
+      const response = await fetch(newSong.lyric);
+      currentLyric.value = await response.text();
+    } else {
+      currentLyric.value = newSong.lyric;
+    }
+  } catch (error) {
+    console.error('Error loading lyric:', error);
     currentLyric.value = '';
   }
 }, { immediate: true });
@@ -491,6 +612,16 @@ const handleLogout = async () => {
     message.error("Đã có lỗi xảy ra!");
   }
 }
+
+//Sang trang Khám phá
+const goToExplore = async () => {
+  const loading = message.loading('Đang chuyển trang...', 0);
+  await router.push({ name: 'explore' }).then(() => {
+    window.location.reload();
+  });
+  loading();
+  visible.value = false;
+};
 </script>
 
 <style>
@@ -590,6 +721,7 @@ const handleLogout = async () => {
 .ant-drawer .ant-drawer-close {
   color: var(--text-light);
 }
+
 .ant-drawer .ant-drawer-content {
   background: rgba(26, 26, 46, 0.9);
 }
@@ -662,7 +794,7 @@ const handleLogout = async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.6) 0%, rgba(15, 52, 96, 0.6) 100%);
+  /* background: linear-gradient(135deg, rgba(26, 26, 46, 0.6) 0%, rgba(15, 52, 96, 0.6) 100%); */
 }
 
 .main-header {
@@ -706,10 +838,7 @@ const handleLogout = async () => {
 
 .ant-drawer .ant-drawer-body {
   overflow: hidden;
-}
-
-.ant-drawer .ant-drawer-extra {
-  display: none;
+  padding: 0;
 }
 
 /* Button Styles */
@@ -720,12 +849,129 @@ const handleLogout = async () => {
 .ant-btn:hover {
   transform: translateY(-2px);
 }
+
 </style>
 
 <style scoped>
+/* User dropdown styles */
+.user-avatar {
+  display: flex;
+  margin-right: 5px;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.username {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Dropdown menu styles */
+.ant-dropdown-menu {
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.ant-dropdown-menu-item {
+  color: var(--text-light);
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.ant-dropdown-menu-item-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Main header padding */
+.main-header {
+  padding: 0.8rem 2rem;
+}
+
 .ant-input-search .ant-input {
   background: transparent;
   color: #f8f9fa;
+}
+
+/* Nút khám phá trên header desktop */
+.explore-header-btn {
+  color: var(--accent-color);
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 4px 12px;
+  transition: all 0.3s ease;
+}
+
+.explore-header-btn:hover {
+  background: rgba(67, 97, 238, 0.1);
+  color: var(--accent-color);
+}
+
+.explore-header-btn .iconify {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+/* Container cho header drawer */
+.drawer-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-right: 8px;
+}
+
+/* Nút khám phá trong drawer */
+.explore-drawer-btn {
+  color: var(--accent-color);
+  padding: 0 8px;
+  height: auto;
+}
+
+.explore-drawer-btn .iconify {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+.explore-text {
+  margin-left: 4px;
+  font-size: 14px;
+}
+
+:deep(.ant-tabs-content) {
+  overflow: hidden;
+}
+
+/* Ẩn text trên mobile nhỏ */
+@media (max-width: 375px) {
+  .explore-text {
+    display: none;
+  }
+}
+
+/* Điều chỉnh header drawer */
+:deep(.ant-drawer-header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 12px;
+  background: rgba(26, 26, 46, 0.9);
+}
+
+:deep(.ant-drawer-title) {
+  width: 100%;
 }
 
 /* Responsive cho mobile */

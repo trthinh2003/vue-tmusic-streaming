@@ -19,7 +19,12 @@ import {
     Menu,
     Dropdown,
     Upload,
-    Popconfirm
+    Popconfirm,
+    Tooltip,
+    Avatar,
+    Empty,
+    Comment,
+    Switch
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -54,6 +59,11 @@ app.use(Menu)
 app.use(Dropdown)
 app.use(Upload)
 app.use(Popconfirm)
+app.use(Tooltip)
+app.use(Avatar)
+app.use(Empty)
+app.use(Comment)
+app.use(Switch)
 app.use(formatDate)
 app.use(truncateWords)
 app.use(router)

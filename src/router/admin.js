@@ -31,6 +31,18 @@ const admin = [
         meta: { title: "Bài hát", requiresAuth: true, roles: "Admin" },
       },
       {
+        path: "/admin/songs/create",
+        name: "admin-songs-create",
+        component: () => import("@/pages/admin/songs/create.vue"),
+        meta: { title: "Thêm bài hát", requiresAuth: true, roles: "Admin" },
+      },
+      {
+        path: "/admin/songs/:slug/edit",
+        name: "admin-songs-edit",
+        component: () => import("@/pages/admin/songs/edit.vue"),
+        meta: { title: "Chỉnh sửa bài hát", requiresAuth: true, roles: "Admin" },
+      },
+      {
         path: "/admin/genres",
         name: "admin-genres",
         component: () => import("@/pages/admin/genres/index.vue"),

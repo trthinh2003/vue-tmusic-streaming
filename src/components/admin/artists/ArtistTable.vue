@@ -12,6 +12,9 @@
 			{{ column.title }}
 		</template>
 		<template #bodyCell="{ column, record }">
+			<template v-if="column.key === 'index'">
+				{{ artists.indexOf(record) + 1 + (pagination.current - 1) * pagination.pageSize }}
+			</template>
 			<template v-if="column.key === 'avatar'">
 				<img :src="record.avatar" alt=""
 					style="width: 50px; height: 50px; border-radius: 5px; object-fit: cover;">
@@ -115,6 +118,8 @@ export default {
 				if (newArtist.value.avatar instanceof File) {
 					formData.append('Avatar', newArtist.value.avatar);
 				}
+				formData.append('CreatedAt', dayjs().format('YYYY-MM-DD'));
+				formData.append('UpdatedAt', dayjs().format('YYYY-MM-DD'));
 				console.log(artist.id, [...formData.entries()]);
 
 				const response = await updateArtist(artist.id, formData);

@@ -42,6 +42,7 @@
 
 <script>
 import { defineComponent, ref, onMounted } from 'vue';
+import { message } from 'ant-design-vue';
 import { getArtists, createArtist, searchArtists } from "@/services/artistService";
 import dayjs from 'dayjs';
 import ArtistModalCreate from '@/components/admin/artists/ArtistModalCreate.vue';
@@ -157,7 +158,7 @@ export default defineComponent({
         return {
             artists,
             columns: [
-                { title: 'STT', dataIndex: 'id', key: 'id', fixed: 'left', width: 60 },
+                { title: 'STT', key: 'index', fixed: 'left', width: 60 },
                 { title: 'Họ tên', dataIndex: 'name', key: 'name' },
                 { title: 'Avatar', dataIndex: 'avatar', key: 'avatar', align: 'center' },
                 { title: 'Mô tả', dataIndex: 'bio', key: 'bio' },

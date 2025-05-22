@@ -5,12 +5,14 @@
 				<a-col :span="12">
 					<a-form-item label="Họ tên nghệ sĩ">
 						<a-input v-model:value="name" placeholder="Nhập tên nghệ sĩ" />
+						<span class="error-text text-danger">{{ errors.name }}</span>
 					</a-form-item>
 					<a-form-item label="Ngày sinh">
 						<a-date-picker v-model:value="dateOfBirth" format="DD/MM/YYYY" style="width: 100%;" />
 					</a-form-item>
 					<a-form-item label="Thông tin mô tả">
 						<a-textarea v-model:value="bio" placeholder="Nhập thông tin mô tả" :rows="4" />
+						<span class="error-text text-danger">{{ errors.bio }}</span>
 					</a-form-item>
 				</a-col>
 				<a-col :span="12">

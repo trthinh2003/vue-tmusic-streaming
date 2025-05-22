@@ -1,6 +1,6 @@
 import axiosInstance from "@/configs/axios";
 
-export async function getSongs(page = 1, pageSize = 5) {
+export async function getSongs(page = 1, pageSize = 10) {
     return await axiosInstance.get(`/songs?page=${page}&pageSize=${pageSize}`);
 }
 

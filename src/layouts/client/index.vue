@@ -345,7 +345,7 @@ const originalPlaylist = ref([]);
 
 const getSongsFromServer = async () => {
   try {
-    const response = await getSongs();
+    const response = await getSongs(1, 20);
     originalPlaylist.value = response.data.data.map(song => ({
       ...song,
       isFavorite: false

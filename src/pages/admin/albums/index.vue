@@ -21,13 +21,13 @@
                 </div>
             </div>
 			<AlbumTable 
-				:columns="columns"
-				:albums="albums"
-				:loading="loading"
-				:pagination="pagination"
-				@update:pagination="pagination = $event"
-				@fetch-data="fetchAlbums"
-			/>
+                :columns="columns"
+                :albums="albums"
+                :loading="loading"
+                :pagination="pagination"
+                @update:pagination="pagination = $event"
+                @fetch-data="fetchAlbums"
+            />
 		</div>
 	</a-card>
     <AlbumModalCreate 
@@ -59,7 +59,7 @@ const pagination = ref({
 const isModalVisible = ref(false);
 const loading = ref(false);
 const columns = ref([
-    { title: 'STT', dataIndex: 'id', key: 'key', width: 60 },
+    { title: 'STT', key: 'index', fixed: 'left', width: 60 },
     { title: 'Tiêu đề Album', dataIndex: 'title', key: 'title',},
     { title: 'Ảnh', dataIndex: 'imageUrl', key: 'imageUrl', align: 'center', width: 80},
     { title: 'Năm phát hành', dataIndex: 'releaseDate', key: 'releaseDate', align: 'center', width: 120},
@@ -133,7 +133,10 @@ const submitForm = async (album) => {
 			formData.append('Image', newAlbum.value.avatar);
 		}
 		const response = await createAlbum(formData);
-		message.success();
+		message.success(response.data.message);
+        fetchAlbums();
+        newAlbum.value = {};
+        previewImage.value = "";
 		// fetchAlbums(pagination.value.current, pagination.value.pageSize);
 		// isModalVisible.value = false;
 		// console.log([...formData.entries()]);

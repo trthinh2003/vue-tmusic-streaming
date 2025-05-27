@@ -9,6 +9,9 @@
         :scroll="{ x: 'max-content', y: 500 }"
     >
         <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'index'">
+                {{ albums.indexOf(record) + 1 + (pagination.current - 1) * pagination.pageSize}}
+            </template>
             <template v-if="column.key === 'imageUrl'">
                 <img :src="record.imageUrl" alt=""
                     style="width: 50px; height: 50px; border-radius: 5px; object-fit: cover;">
@@ -70,10 +73,20 @@ const props = defineProps({
     columns: Array,
     loading: Boolean,
 	pagination: Object,
-	handleTableChange: Function
 })
-const emits = defineEmits(['showEdit', 'showDetail', 'confirm-delete', 'cancel-delete'])
+const emit = defineEmits([
+    "update:pagination",
+    "fetch-data",
+    "showEdit",
+    "showDetail",
+    "confirm-delete",
+    "cancel-delete"
+]);
 
+const handleTableChange = (pagination) => {
+    emit("update:pagination", pagination);
+    emit("fetch-data", pagination.current, pagination.pageSize);
+};
 
 </script>
 

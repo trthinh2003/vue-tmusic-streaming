@@ -22,41 +22,26 @@
       />
     </ul>
     
+    <!-- Fixed Modal Usage -->
+    <play-list-modal 
+      v-if="showPlaylistModal" 
+      :available-playlists="availablePlaylists" 
+      :current-playlist="currentPlaylist" 
+      @close="closePlaylistModal" 
+      @change-playlist="handlePlaylistChange" 
+    />
+    
     <div v-if="songs.length > itemsPerPage" class="pagination-controls mt-4">
       <button @click="prevPage" :disabled="currentPage === 1"><</button>
       <span class="text-white mx-2">{{ currentPage }} / {{ totalPages }}</span>
       <button @click="nextPage" :disabled="currentPage === totalPages">></button>
-    </div>
-    
-    <!-- Playlist Selection Modal -->
-    <div v-if="showPlaylistModal" class="playlist-modal">
-      <div class="playlist-modal-content">
-        <div class="modal-header">
-          <h3>Select Playlist</h3>
-          <button @click="closePlaylistModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <ul class="playlist-list">
-            <li 
-              v-for="playlist in availablePlaylists" 
-              :key="playlist.id"
-              :class="{ 'active': currentPlaylist && playlist.id === currentPlaylist.id }"
-              @click="selectPlaylist(playlist)"
-            >
-              {{ playlist.name }}
-              <span v-if="currentPlaylist && playlist.id === currentPlaylist.id" class="now-playing">
-                <Icon icon="mdi:music-note" />
-              </span>
-            </li>
-          </ul>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script>
 import SongItem from './SongItem.vue'
+import PlayListModal from './PlayListModal.vue';
 import { Icon } from '@iconify/vue';
 import { ref, computed } from 'vue';
 
@@ -64,11 +49,18 @@ export default {
   name: 'Playlist',
   components: {
     SongItem,
-    Icon
+    Icon,
+    PlayListModal
   },
   props: {
-    songs: Array,
-    currentSong: Object,
+    songs: {
+      type: Array,
+      default: () => []
+    },
+    currentSong: {
+      type: Object,
+      default: () => ({})
+    },
     availablePlaylists: {
       type: Array,
       default: () => []
@@ -111,16 +103,18 @@ export default {
     };
     
     const openPlaylistModal = () => {
+      console.log('Opening playlist modal'); // Debug log
       showPlaylistModal.value = true;
     };
     
     const closePlaylistModal = () => {
+      console.log('Closing playlist modal'); // Debug log
       showPlaylistModal.value = false;
     };
     
-    const selectPlaylist = (playlist) => {
+    const handlePlaylistChange = (playlist) => {
+      console.log('Playlist changed:', playlist); // Debug log
       emit('change-playlist', playlist);
-      closePlaylistModal();
       // Reset to first page when changing playlists
       currentPage.value = 1;
     };
@@ -135,7 +129,7 @@ export default {
       nextPage,
       openPlaylistModal,
       closePlaylistModal,
-      selectPlaylist
+      handlePlaylistChange
     };
   }
 }
@@ -152,8 +146,14 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+  margin-top: 5px;
   padding-bottom: 10px;
   border-bottom: 1px solid #444;
+}
+
+.playlist-header h2 {
+  color: white;
+  margin: 0;
 }
 
 .playlist-selector-btn {
@@ -162,10 +162,19 @@ export default {
   background: #42b983;
   color: white;
   border: none;
-  padding: 5px 10px;
+  padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.playlist-selector-btn:hover {
+  background: #369970;
+}
+
+.mr-1 {
+  margin-right: 4px;
 }
 
 .current-playlist-info {
@@ -175,117 +184,51 @@ export default {
   border-left: 3px solid #42b983;
   border-radius: 3px;
   font-size: 0.9rem;
+  color: white;
 }
 
 ul {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .pagination-controls {
   display: flex;
   justify-content: center;
-  margin-top: 10px;
+  align-items: center;
+  margin-top: 15px;
 }
 
-button {
+.pagination-controls button {
   background: #42b983;
   color: white;
   border: none;
-  padding: 5px 10px;
+  padding: 8px 12px;
   cursor: pointer;
   margin: 0 5px;
   border-radius: 5px;
+  transition: background-color 0.2s;
 }
 
-button:disabled {
+.pagination-controls button:hover:not(:disabled) {
+  background: #369970;
+}
+
+.pagination-controls button:disabled {
   background: #555;
   cursor: not-allowed;
 }
 
-/* Modal styles */
-.playlist-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.playlist-modal-content {
-  background-color: #222;
-  border-radius: 8px;
-  width: 80%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background-color: #333;
-  border-bottom: 1px solid #444;
-}
-
-.modal-header h3 {
-  margin: 0;
+.text-white {
   color: white;
 }
 
-.close-btn {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
+.mx-2 {
+  margin: 0 8px;
 }
 
-.modal-body {
-  padding: 15px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.playlist-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.playlist-list li {
-  padding: 12px 15px;
-  border-bottom: 1px solid #444;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.playlist-list li:last-child {
-  border-bottom: none;
-}
-
-.playlist-list li:hover {
-  background-color: #333;
-}
-
-.playlist-list li.active {
-  background-color: rgba(66, 185, 131, 0.2);
-}
-
-.now-playing {
-  color: #42b983;
+.mt-4 {
+  margin-top: 16px;
 }
 </style>

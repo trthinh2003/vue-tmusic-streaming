@@ -9,14 +9,14 @@
             <form @submit.prevent="handleLogin" class="login-form">
                 <div class="form-group">
                     <label class="ms-1 fw-bold" for="email">Email</label>
-                    <input v-model="email" type="email" id="email" placeholder="Nhập email" required>
+                    <input v-model="email" type="email" id="email" placeholder="Nhập email" autocomplete="email" required>
                     <span class="error-text">{{ errors.email }}</span>
                     <i class="fas fa-user input-icon"></i>
                 </div>
 
                 <div class="form-group">
                     <label class="ms-1 fw-bold" for="password">Mật khẩu</label>
-                    <input v-model="password" type="password" id="password" placeholder="Nhập mật khẩu" required>
+                    <input v-model="password" type="password" id="password" placeholder="Nhập mật khẩu" autocomplete="new-password" required>
                     <span class="error-text">{{ errors.password }}</span>
                     <i class="fas fa-lock input-icon"></i>
                 </div>

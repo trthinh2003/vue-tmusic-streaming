@@ -258,6 +258,113 @@
       @seek-lyric="handleSeek"
     />
   </a-drawer>
+  <div class="song-detail-trigger" @click="toggleSongDetail">
+    <i class="fa-solid fa-chevron-up"></i>
+  </div>
+  <a-drawer
+    class="song-detail-drawer"
+    :height="600"
+    title="Chi tiết bài hát"
+    placement="bottom"
+    :open="openSongDetail"
+    @close="toggleSongDetail"
+    :header-style="{
+      background: 'rgba(26, 26, 46, 0.9)',
+      color: 'white'
+    }"
+    :body-style="{
+      backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${tmusicbackground2})`,
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat',
+      padding: 0
+    }"
+  >
+    <div class="song-detail-container">
+      <!-- Cột trái - Thông tin bài hát hiện tại -->
+      <div class="left-column">
+        <div class="song-detail-content">
+          <div class="song-cover-container">
+            <img :src="currentSong.cover" alt="Song cover" class="song-cover" />
+          </div>
+          <div class="song-info">
+            <h3>{{ currentSong.title }}</h3>
+            <p class="artist">{{ currentSong.artist }}</p>
+            <div class="song-meta">
+              <span class="genre">{{ currentSong.genre }}</span>
+              <span class="duration">{{ currentSong.duration }}</span>
+            </div>
+          </div>
+          <div class="song-actions">
+            <a-button type="text" @click="toggleFavorite">
+              <i :class="['fa-heart', isFavorite ? 'fa-solid text-danger' : 'fa-regular']"></i>
+            </a-button>
+            <a-button type="text">
+              <i class="fa-solid fa-share-nodes"></i>
+            </a-button>
+            <a-button type="text" @click="toggleRightDrawer">
+              <i class="fa-solid fa-comment-dots"></i>
+            </a-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cột phải - Danh sách bài hát -->
+      <div class="right-column">
+        <div class="song-lists">
+          <!-- Bài hát cùng ca sĩ -->
+          <div class="song-list-section">
+            <h4 class="section-title">
+              <i class="fa-solid fa-music"></i>
+              Bài hát cùng ca sĩ
+            </h4>
+            <div class="song-list">
+              <div 
+                v-for="song in sameArtistSongs" 
+                :key="song.id"
+                class="song-item"
+                :class="{ active: song.id === currentSong.id }"
+                @click="selectSong(song)"
+              >
+                <img :src="song.cover" alt="Song cover" class="song-item-cover" />
+                <div class="song-item-info">
+                  <p class="song-item-title">{{ song.title }}</p>
+                  <p class="song-item-duration">{{ song.duration }}</p>
+                </div>
+                <button class="play-btn" @click.stop="playSong(song)">
+                  <i class="fa-solid fa-play"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bài hát gợi ý -->
+          <div class="song-list-section">
+            <h4 class="section-title">
+              <i class="fa-solid fa-thumbs-up"></i>
+              Gợi ý cho bạn
+            </h4>
+            <div class="song-list">
+              <div 
+                v-for="song in suggestedSongs" 
+                :key="song.id"
+                class="song-item"
+                @click="selectSong(song)"
+              >
+                <img :src="song.cover" alt="Song cover" class="song-item-cover" />
+                <div class="song-item-info">
+                  <p class="song-item-title">{{ song.title }}</p>
+                  <p class="song-item-artist">{{ song.artist }}</p>
+                </div>
+                <button class="play-btn" @click.stop="playSong(song)">
+                  <i class="fa-solid fa-play"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </a-drawer>
 </template>
 
 <script setup>
@@ -273,73 +380,9 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getSongs } from '@/services/songService'
 import { useProfileStore } from '@/stores/useProfile.js'
+import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
 
 import adminLogo from '@/assets/img/admin-logo.png';
-
-// Import các file assets
-// import cover1 from '@/assets/client/covers/cover1.jpg'
-// import cover2 from '@/assets/client/covers/cover2.jpg'
-// import cover3 from '@/assets/client/covers/cover3.jpg'
-// import cover4 from '@/assets/client/covers/cover4.jpg'
-// import cover5 from '@/assets/client/covers/cover5.jpg'
-// import cover6 from '@/assets/client/covers/cover6.jpg'
-// import cover7 from '@/assets/client/covers/cover7.jpg'
-// import cover8 from '@/assets/client/covers/cover8.jpg'
-// import cover9 from '@/assets/client/covers/cover9.jpg'
-// import cover10 from '@/assets/client/covers/cover10.jpg'
-// import cover11 from '@/assets/client/covers/cover11.jpg'
-// import cover12 from '@/assets/client/covers/cover12.jpg'
-// import song1 from '@/assets/client/songs/song1.mp3'
-// import song2 from '@/assets/client/songs/song2.mp3'
-// import song3 from '@/assets/client/songs/song3.mp3'
-// import song4 from '@/assets/client/songs/song4.mp3'
-// import song5 from '@/assets/client/songs/song5.mp3'
-// import song6 from '@/assets/client/songs/song6.mp3'
-// import song7 from '@/assets/client/songs/song7.mp3'
-// import song8 from '@/assets/client/songs/song8.mp3'
-// import song9 from '@/assets/client/songs/song9.mp3'
-// import song10 from '@/assets/client/songs/song10.mp3'
-// import song11 from '@/assets/client/songs/song11.mp3'
-// import song12 from '@/assets/client/songs/song12.mp3'
-// import bg1 from '@/assets/client/backgrounds/bg-song1.jpg'
-// import bg2 from '@/assets/client/backgrounds/bg-song2.jpg'
-// import bg3 from '@/assets/client/backgrounds/bg-song3.jpg'
-// import bg4 from '@/assets/client/backgrounds/bg-song4.jpg'
-// import bg5 from '@/assets/client/backgrounds/bg-song5.jpg'
-// import bg6 from '@/assets/client/backgrounds/bg-song6.jpg'
-// import bg7 from '@/assets/client/backgrounds/bg-song7.jpg'
-// import bg8 from '@/assets/client/backgrounds/bg-song8.jpg'
-// import bg9 from '@/assets/client/backgrounds/bg-song9.jpg'
-// import bg10 from '@/assets/client/backgrounds/bg-song10.jpg'
-// import bg11 from '@/assets/client/backgrounds/bg-song11.jpg'
-// import bg12 from '@/assets/client/backgrounds/bg-song12.jpg'
-// import lyric1 from '@/assets/client/lyrics/lyric1.lrc'
-// import lyric2 from '@/assets/client/lyrics/lyric2.lrc'
-// import lyric3 from '@/assets/client/lyrics/lyric3.lrc'
-// import lyric4 from '@/assets/client/lyrics/lyric4.lrc'
-// import lyric5 from '@/assets/client/lyrics/lyric5.lrc'
-// import lyric6 from '@/assets/client/lyrics/lyric6.lrc'
-// import lyric7 from '@/assets/client/lyrics/lyric7.lrc'
-// import lyric8 from '@/assets/client/lyrics/lyric8.lrc'
-// import lyric9 from '@/assets/client/lyrics/lyric9.lrc'
-// import lyric10 from '@/assets/client/lyrics/lyric10.lrc'
-// import lyric11 from '@/assets/client/lyrics/lyric11.lrc'
-// import lyric12 from '@/assets/client/lyrics/lyric12.lrc'
-
-// const originalPlaylist = [
-//   { id: 1, title: "The World Hasn't Even Started Yet", artist: "WxS", genre: "Pop", cover: cover1, audio: song1, duration: '2:01', background: bg1, lyric: lyric1 },
-//   { id: 2, title: "Composing The Future", artist: "25-ji, Nightcord de", genre: "Jazz", cover: cover2, audio: song2, duration: '3:50', background: bg2, lyric: lyric2 },
-//   { id: 3, title: "Bad Apple!!", artist: "25-ji, Nightcord de", genre: "Pop", cover: cover3, audio: song3, duration: '3:49', background: bg3, lyric: lyric3 },
-//   { id: 4, title: "Starry Sky Melody/星空のメロディ", artist: "Kusanagi Nene (WxS)", genre: "Pop", cover: cover4, audio: song4, duration: '1:48', background: bg4, lyric: lyric4 },
-//   { id: 5, title: "Mặt Trái Của Sự Thật", artist: "HKT", genre: "Jazz", cover: cover5, audio: song5, duration: '4:32', background: bg5, lyric: lyric5 },
-//   { id: 6, title: "Senbonzakura", artist: "Hatsune Miku", genre: "Pop", cover: cover6, audio: song6, duration: '4:04', background: bg6, lyric: lyric6 },
-//   { id: 7, title: "Em Của Ngày Hôm Qua", artist: "Sơn Tùng M-TP", genre: "Pop", cover: cover7, audio: song7, duration: '3:52', background: bg7, lyric: lyric7 },
-//   { id: 8, title: "Blue Bird", artist: "Ikimonogakari", genre: "Pop", cover: cover8, audio: song8, duration: '3:32', background: bg8, lyric: lyric8 },
-//   { id: 9, title: "Sakayume (Jujutsu Kaisen 0)", artist: "King Gnu", genre: "Pop", cover: cover9, audio: song9, duration: '5:07', background: bg9, lyric: lyric9 },
-//   { id: 10, title: "Hazy Moon", artist: "Hatsune Miku", genre: "Pop", cover: cover10, audio: song10, duration: '4:15', background: bg10, lyric: lyric10 },
-//   { id: 11, title: "Yoru Ni Kakeru / 夜に駆ける", artist: "YOASOBI", genre: "Pop", cover: cover11, audio: song11, duration: '4:18', background: bg11, lyric: lyric11 },
-//   { id: 12, title: "Yume Wo Kanaete Doraemon", artist: "MAO", genre: "Pop", cover: cover12, audio: song12, duration: '4:01', background: bg12, lyric: lyric12 },
-// ]
 
 const originalPlaylist = ref([]);
 
@@ -382,10 +425,87 @@ const karaokeMode = ref(false);
 
 currentUser.value = useProfileStore().getProfile();
 
+/*****************Chi tiết bài hát và hệ thống gợi ý*****************/
+const openSongDetail = ref(false);
+const isFavorite = ref(false);
+
+const sameArtistSongs = ref([
+  {
+    id: 2,
+    title: "Perfect",
+    artist: "Ed Sheeran",
+    genre: "Pop",
+    cover: "https://res.cloudinary.com/dny7pcxme/image/upload/v1747068970/TMusicStreaming/song/covers/TMusicStreaming/song/covers/84f6ecdd-22da-4064-9b53-caed41c61eac.jpg.webp",
+    audio: "https://res.cloudinary.com/dny7pcxme/video/upload/v1747637113/TMusicStreaming/song/TMusicStreaming/song/1ca09113-69ba-49a1-bee4-ee1d042a0c58.mp3.mp4",
+    lyric: "https://res.cloudinary.com/dny7pcxme/raw/upload/v1747637114/TMusicStreaming/song/lyrics/TMusicStreaming/song/lyrics/c8c7cf16-4f96-4839-b796-cc9d1e0e1e78.lrc",
+    background: "https://res.cloudinary.com/dny7pcxme/image/upload/v1747637091/TMusicStreaming/song/images/TMusicStreaming/song/images/67417117-1ff3-44bb-ba83-7f842c1eea63.jpg.jpg",
+    duration: "4:23"
+  },
+  {
+    id: 3,
+    title: "Thinking Out Loud",
+    artist: "Ed Sheeran",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "4:41"
+  },
+  {
+    id: 4,
+    title: "Photograph",
+    artist: "Ed Sheeran",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "4:18"
+  },
+  {
+    id: 5,
+    title: "Castle on the Hill",
+    artist: "Ed Sheeran",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "4:21"
+  }
+]);
+
+const suggestedSongs = ref([
+  {
+    id: 6,
+    title: "Blinding Lights",
+    artist: "The Weeknd",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "3:20"
+  },
+  {
+    id: 7,
+    title: "Watermelon Sugar",
+    artist: "Harry Styles",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "2:54"
+  },
+  {
+    id: 8,
+    title: "Levitating",
+    artist: "Dua Lipa",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "3:23"
+  },
+  {
+    id: 9,
+    title: "Good 4 U",
+    artist: "Olivia Rodrigo",
+    cover: "https://via.placeholder.com/50x50",
+    duration: "2:58"
+  }
+]);
+
+const toggleSongDetail = () => {
+  openSongDetail.value = !openSongDetail.value;
+};
+
+const toggleFavorite = () => {
+  isFavorite.value = !isFavorite.value;
+  // Có thể thêm logic lưu vào favorite list ở đây
+};
+
 const handleKaraokeToggle = (checked) => {
-  // console.log('Karaoke mode:', checked);
   karaokeMode.value = checked;
-  // Tùy nhu cầu, có thể emit ra ngoài hoặc truyền cho LyricDisplay
 };
 
 const applyFilter = () => {
@@ -420,7 +540,7 @@ const handleSeek = (time) => {
   }
 };
 
-/**************** Tags ****************/
+/**************** Tabs ****************/
 // Computed property để kiểm tra có bộ lọc đang hoạt động không
 const hasActiveFilters = computed(() => {
   return Object.values(filters.value).some(val => val !== '');
@@ -1016,5 +1136,307 @@ const goToExplore = async () => {
     border-color: var(--primary-color);
     color: white;
   }
+}
+</style>
+
+<style scoped>
+.song-detail-trigger {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.song-detail-trigger:hover {
+  transform: translateY(-3px);
+  background: var(--secondary-color);
+}
+
+.song-detail-drawer .ant-drawer-content-wrapper {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  overflow: hidden;
+}
+
+.song-detail-container {
+  display: flex;
+  height: 100%;
+  color: white;
+}
+
+/* Cột trái */
+.left-column {
+  flex: 1;
+  padding: 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.song-detail-content {
+  text-align: center;
+}
+
+.song-cover-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.song-cover {
+  width: 200px;
+  height: 200px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.song-info {
+  margin-bottom: 20px;
+}
+
+.song-info h3 {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+  color: white;
+}
+
+.song-info .artist {
+  color: var(--accent-color, #64ffda);
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.song-meta {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.song-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.song-actions .ant-btn {
+  color: white;
+  font-size: 1.2rem;
+  border: none;
+  background: transparent;
+}
+
+.song-actions .ant-btn:hover {
+  color: var(--accent-color, #64ffda);
+  transform: scale(1.1);
+  background: transparent;
+}
+
+/* Cột phải */
+.right-column {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.song-lists {
+  height: 100%;
+}
+
+.song-list-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title i {
+  color: var(--accent-color, #64ffda);
+}
+
+.song-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.song-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.song-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.song-item.active {
+  background: var(--accent-color, #64ffda);
+  color: #1a1a2e;
+}
+
+.song-item-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  margin-right: 12px;
+}
+
+.song-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.song-item-title {
+  font-weight: 500;
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-item-duration,
+.song-item-artist {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-item.active .song-item-duration,
+.song-item.active .song-item-artist {
+  color: rgba(26, 26, 46, 0.7);
+}
+
+.play-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-color, #64ffda);
+  border: none;
+  color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.song-item:hover .play-btn {
+  opacity: 1;
+}
+
+.play-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Animation khi mở drawer */
+.song-detail-drawer .ant-drawer-content {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .song-detail-container {
+    flex-direction: column;
+  }
+  
+  .left-column {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex: none;
+  }
+  
+  .song-cover {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .song-info h3 {
+    font-size: 1.3rem;
+  }
+  
+  .right-column {
+    flex: 1;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 576px) {
+  .song-detail-container {
+    flex-direction: column;
+  }
+  
+  .left-column {
+    padding: 15px;
+  }
+  
+  .right-column {
+    padding: 15px;
+  }
+  
+  .song-cover {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* Custom scrollbar cho cột phải */
+.right-column::-webkit-scrollbar {
+  width: 4px;
+}
+
+.right-column::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.right-column::-webkit-scrollbar-thumb {
+  background: var(--accent-color, #64ffda);
+  border-radius: 2px;
+}
+
+.right-column::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 255, 218, 0.8);
 }
 </style>

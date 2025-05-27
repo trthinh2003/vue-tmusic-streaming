@@ -3,11 +3,11 @@
     :open="modelValue"
     :footer="false"
     class="music-modal"
-		@click="handleCancel"
+    @click="handleCancel"
     :width="800"
     style="top: 50px;"
   >
-		<h2 class="modal-title mb-3">🎵 Khám phá âm nhạc</h2>
+    <h2 class="modal-title mb-3">🎵 Khám phá âm nhạc</h2>
 
     <div class="search-container">
       <a-input-search
@@ -16,16 +16,16 @@
         size="large"
         class="music-search-bar"
         @search="handleApply"
-				:styles="{
-					'input-group-addon': { background: 'transparent', border: 'none' },
-					'input-search-button': { background: 'transparent', border: 'none', color: 'rgba(255, 255, 255, 0.8)' }
-				}"
+        :styles="{
+          'input-group-addon': { background: 'transparent', border: 'none' },
+          'input-search-button': { background: 'transparent', border: 'none', color: 'rgba(255, 255, 255, 0.8)' }
+        }"
       >
-				<template #enterButton>
-					<span>
-						<search-outlined />
-					</span>
-				</template>
+        <template #enterButton>
+          <span>
+            <search-outlined />
+          </span>
+        </template>
       </a-input-search>
     </div>
 
@@ -49,7 +49,7 @@
       >
         <div class="music-item-content">
           <div class="music-cover">
-            <img :src="song.thumbnail" alt="thumbnail" width="25px"/>
+            <img :src="song.cover" alt="thumbnail" width="25px"/>
             <div class="play-icon">
               <play-circle-filled />
             </div>
@@ -76,6 +76,80 @@
                 </a-menu>
               </template>
             </a-dropdown>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Danh sách album -->
+    <div class="album-list-container" v-if="activeTab === 'album' && !selectedAlbum">
+      <div class="album-grid">
+        <div 
+          class="album-item" 
+          v-for="(album, index) in albums" 
+          :key="index"
+          @click="selectAlbum(album)"
+        >
+          <div class="album-cover">
+            <img :src="album.cover" alt="album cover"/>
+            <div class="album-play-icon">
+              <play-circle-filled />
+            </div>
+          </div>
+          <div class="album-info">
+            <h3 class="album-title">{{ album.title }}</h3>
+            <p class="album-artist">{{ album.artist }}</p>
+            <p class="album-year">{{ album.year }} • {{ album.songs.length }} bài hát</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danh sách bài hát trong album đã chọn -->
+    <div class="album-songs-container" v-if="activeTab === 'album' && selectedAlbum">
+      <div class="album-header">
+        <a-button class="back-button" @click="selectedAlbum = null">
+          <arrow-left-outlined /> Quay lại
+        </a-button>
+        <div class="album-detail">
+          <img :src="selectedAlbum.cover" alt="album cover" class="album-detail-cover"/>
+          <div class="album-detail-info">
+            <h2 class="album-detail-title">{{ selectedAlbum.title }}</h2>
+            <p class="album-detail-artist">{{ selectedAlbum.artist }}</p>
+            <p class="album-detail-meta">{{ selectedAlbum.year }} • {{ selectedAlbum.songs.length }} bài hát</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="album-songs-list">
+        <div
+          class="music-item"
+          v-for="(song, index) in selectedAlbum.songs"
+          :key="index"
+          @click="playSong(song)"
+        >
+          <div class="music-item-content">
+            <div class="music-number">{{ index + 1 }}</div>
+            <div class="music-info">
+              <h3 class="music-title">{{ song.title }}</h3>
+              <p class="music-artist">{{ song.artist }}</p>
+            </div>
+            <div class="music-duration">{{ song.duration }}</div>
+            <div class="music-actions">
+              <a-dropdown :trigger="['click']" placement="bottomRight">
+                <a class="action-btn" @click.prevent>
+                  <more-outlined />
+                </a>
+                <template #overlay>
+                  <a-menu @click="(e) => handleSongAction(e.key, song)">
+                    <a-menu-item key="add"><template #icon><plus-outlined /></template>Thêm vào playlist</a-menu-item>
+                    <a-menu-item key="favorite"><template #icon><heart-outlined /></template>Yêu thích</a-menu-item>
+                    <a-menu-item key="download"><template #icon><download-outlined /></template>Tải xuống</a-menu-item>
+                    <a-menu-item key="share"><template #icon><share-alt-outlined /></template>Chia sẻ</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </div>
           </div>
         </div>
       </div>
@@ -115,7 +189,7 @@
     <!-- Footer với nút bấm -->
     <div class="music-footer">
       <a-button class="footer-btn cancel-btn" @click="handleCancel">Đóng</a-button>
-      <a-button class="footer-btn apply-btn" type="primary" @click="handleApply">
+      <a-button v-if="activeTab === 'option'" class="footer-btn apply-btn" type="primary" @click="handleApply">
         <template #icon><check-outlined /></template>
         Áp dụng
       </a-button>
@@ -124,18 +198,17 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { 
-  PlayCircleFilled, SearchOutlined,
+  PlayCircleFilled, SearchOutlined, ArrowLeftOutlined,
   MoreOutlined, PlusOutlined, HeartOutlined, 
   DownloadOutlined, ShareAltOutlined, UserOutlined,
   FireOutlined, ThunderboltOutlined, StarOutlined,
   CrownOutlined, RocketOutlined, CheckOutlined
 } from '@ant-design/icons-vue';
 
-import cover5 from '@/assets/client/covers/cover5.jpg';
-import cover7 from '@/assets/client/covers/cover7.jpg';
-import cover10 from '@/assets/client/covers/cover10.jpg';
+import { message } from 'ant-design-vue';
+import { getSongs } from '@/services/songService';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -157,38 +230,123 @@ const emit = defineEmits([
 
 const localFilters = ref({ ...props.filters });
 const activeTab = ref("all");
+const selectedAlbum = ref(null);
 
-const filteredSongs = ref([
+const filteredSongs = ref([]);
+const albums = ref([
   {
-    title: "Cơn Mưa Ngang Qua",
+    id: 1,
+    title: "Những Bài Hát Hay Nhất",
     artist: "Sơn Tùng M-TP",
-    thumbnail: cover7,
+    cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+    year: "2023",
+    songs: [
+      {
+        id: 101,
+        title: "Chúng Ta Của Hiện Tại",
+        artist: "Sơn Tùng M-TP",
+        cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+        duration: "4:21"
+      },
+      {
+        id: 102,
+        title: "Muộn Rồi Mà Sao Còn",
+        artist: "Sơn Tùng M-TP",
+        cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+        duration: "3:45"
+      },
+      {
+        id: 103,
+        title: "Hãy Trao Cho Anh",
+        artist: "Sơn Tùng M-TP ft. Snoop Dogg",
+        cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+        duration: "4:05"
+      }
+    ]
   },
   {
-    title: "Tell Your World",
-    artist: "Hatsune Miku",
-    thumbnail: cover10,
+    id: 2,
+    title: "Tình Yêu Không Hẹn Trước",
+    artist: "Noo Phước Thịnh",
+    cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
+    year: "2022",
+    songs: [
+      {
+        id: 201,
+        title: "Tình Yêu Không Hẹn Trước",
+        artist: "Noo Phước Thịnh",
+        cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
+        duration: "4:12"
+      },
+      {
+        id: 202,
+        title: "Em Đã Thương Người Ta Hơn Anh",
+        artist: "Noo Phước Thịnh",
+        cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
+        duration: "3:58"
+      }
+    ]
   },
   {
-    title: "Thêm Một Lần Đau",
-    artist: "HKT",
-    thumbnail: cover5,
+    id: 3,
+    title: "Đen Đá Không Đường",
+    artist: "Đen Vâu",
+    cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
+    year: "2021",
+    songs: [
+      {
+        id: 301,
+        title: "Bài Này Chill Phết",
+        artist: "Đen Vâu ft. MIN",
+        cover: "https://i.scdn.co/image/ab67616d00001e02a3a5a7e6c2a8a5e8e9a3b5e2",
+        duration: "4:38"
+      },
+      {
+        id: 302,
+        title: "Đi Về Nhà",
+        artist: "Đen Vâu ft. JustaTee",
+        cover: "https://i.scdn.co/image/ab67616d00001e02a3a5a7e6c2a8a5e8e9a3b5e2",
+        duration: "4:12"
+      },
+      {
+        id: 303,
+        title: "Mang Tiền Về Cho Mẹ",
+        artist: "Đen Vâu ft. Nguyên Thảo",
+        cover: "https://i.scdn.co/image/ab67616d00001e02a3a5a7e6c2a8a5e8e9a3b5e2",
+        duration: "5:01"
+      }
+    ]
   },
   {
-    title: "Em Của Ngày Hôm Qua",
-    artist: "Sơn Tùng M-TP",
-    thumbnail: cover7,
-  },
-  {
-    title: "Lạc Trôi",
-    artist: "Sơn Tùng M-TP",
-    thumbnail: cover7,
-  },
-  {
-    title: "Nơi Này Có Anh",
-    artist: "Sơn Tùng M-TP",
-    thumbnail: cover7,
-  },
+    id: 4,
+    title: "Nhạc Trẻ 2023",
+    artist: "Nhiều Nghệ Sĩ",
+    cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
+    year: "2023",
+    songs: [
+      {
+        id: 401,
+        title: "Có Chơi Có Chịu",
+        artist: "Karik ft. OnlyC",
+        cover: "https://i.scdn.co/image/ab67616d00001e02b8d8e8e8e8e8e8e8e8e8e8e8",
+        duration: "3:45"
+      },
+      {
+        id: 402,
+        title: "Thức Giấc",
+        artist: "Da LAB",
+        cover: "https://i.scdn.co/image/ab67616d00001e02b8d8e8e8e8e8e8e8e8e8e8e8",
+        duration: "4:12"
+      },
+      {
+        id: 403,
+        title: "Sài Gòn Đau Lòng Quá",
+        artist: "Hứa Kim Tuyền ft. Hoàng Duyên",
+        cover: "https://i.scdn.co/image/ab67616d00001e02b8d8e8e8e8e8e8e8e8e8e8e8",
+        duration: "5:20"
+      }
+    ]
+  }
 ]);
 
 watch(() => props.filters, (newVal) => {
@@ -212,6 +370,19 @@ const handleApply = () => {
   emit('apply-filter');
   emit('update:modelValue', false);
 };
+
+const selectAlbum = (album) => {
+  selectedAlbum.value = album;
+};
+
+onMounted(async () => {
+  try {
+    const response = await getSongs();
+    filteredSongs.value = response.data.data;
+  } catch (error) {
+    console.log(error);
+  }
+})
 </script>
 
 <style scoped>
@@ -319,22 +490,25 @@ const handleApply = () => {
 }
 
 /* Danh sách nhạc */
-.music-list-container {
+.music-list-container, .album-songs-list {
   max-height: 50vh;
   overflow-y: auto;
   padding: 0 16px;
   margin-top: 16px;
 }
 
-.music-list-container::-webkit-scrollbar {
+.music-list-container::-webkit-scrollbar,
+.album-songs-list::-webkit-scrollbar {
   width: 6px;
 }
 
-.music-list-container::-webkit-scrollbar-track {
+.music-list-container::-webkit-scrollbar-track,
+.album-songs-list::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.music-list-container::-webkit-scrollbar-thumb {
+.music-list-container::-webkit-scrollbar-thumb,
+.album-songs-list::-webkit-scrollbar-thumb {
   background: linear-gradient(#00dbde, #fc00ff);
   border-radius: 3px;
 }
@@ -454,9 +628,178 @@ const handleApply = () => {
   transform: scale(1.1);
 }
 
+/* Album list */
+.album-list-container {
+  padding: 16px;
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 10px;
+}
+
+.album-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.album-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-5px);
+}
+
+.album-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.album-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-play-icon {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 219, 222, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s;
+}
+
+.album-item:hover .album-play-icon {
+  opacity: 1;
+}
+
+.album-play-icon :deep(svg) {
+  font-size: 20px;
+  color: white;
+}
+
+.album-info {
+  padding: 12px;
+}
+
+.album-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-artist {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-year {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Album detail */
+.album-songs-container {
+  padding: 16px;
+}
+
+.album-header {
+  margin-bottom: 20px;
+}
+
+.back-button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 15px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.back-button:hover {
+  color: white;
+}
+
+.album-detail {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.album-detail-cover {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.album-detail-info {
+  flex: 1;
+}
+
+.album-detail-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+.album-detail-artist {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.album-detail-meta {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Album songs list */
+.album-songs-list .music-item-content {
+  padding: 10px 15px;
+}
+
+.album-songs-list .music-number {
+  width: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.album-songs-list .music-duration {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin: 0 15px;
+}
+
 /* Bộ lọc */
 .filter-input {
-	padding: 0;
+  padding: 0;
 }
 
 .filter-options {
@@ -549,7 +892,7 @@ const handleApply = () => {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
-.music-item {
+.music-item, .album-item {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
@@ -561,24 +904,16 @@ const handleApply = () => {
 .music-item:nth-child(6) { animation-delay: 0.35s; }
 
 @media (max-width: 576px) {
-	/* .music-modal :deep(.ant-modal) {
-    width: 100% !important;
-    max-width: 100vw;
-    margin: 0;
-    top: 0;
-    padding: 10px;
-  } */
-  
   .music-modal :deep(.ant-modal-content) {
     height: 85vh;
     border-radius: 0;
   }
 
-	.modal-title {
-		font-size: 1.2rem;
-	}
+  .modal-title {
+    font-size: 1.2rem;
+  }
 
-	.music-tabs :deep(.ant-tabs-tab) {
+  .music-tabs :deep(.ant-tabs-tab) {
     padding: 0;
     font-size: 10px;
   }
@@ -588,12 +923,28 @@ const handleApply = () => {
     align-items: center;
   }
 
-	.music-item-content {
-		font-size: 10px;
-	}
+  .music-item-content {
+    font-size: 10px;
+  }
 
-	.footer-btn {
-		padding: 0 12px;
-	}
+  .footer-btn {
+    padding: 0 12px;
+  }
+
+  .album-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .album-detail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .album-detail-cover {
+    width: 100px;
+    height: 100px;
+  }
 }
 </style>

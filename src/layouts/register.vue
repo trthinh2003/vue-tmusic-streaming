@@ -10,14 +10,14 @@
         <form @submit.prevent="handleRegister" class="register-form">
           <div class="form-group">
             <label for="nameRegister">Họ và tên</label>
-            <input id="nameRegister" v-model="nameRegister" type="text" placeholder="Nhập họ và tên" />
+            <input id="nameRegister" v-model="nameRegister" type="text" autocomplete="name" placeholder="Nhập họ và tên" />
             <span v-if="errors.nameRegister" class="error-text">{{ errors.nameRegister }}</span>
             <i class="fa-solid fa-signature input-icon"></i>
           </div>
 
           <div class="form-group">
             <label for="emailRegister">Email</label>
-            <input id="emailRegister" v-model="emailRegister" type="email" placeholder="Nhập email" />
+            <input id="emailRegister" v-model="emailRegister" type="email" autocomplete="email" placeholder="Nhập email" />
             <span v-if="errors.emailRegister" class="error-text">{{ errors.emailRegister }}</span>
             <i class="fas fa-user input-icon"></i>
           </div>
@@ -39,14 +39,14 @@
 
           <div class="form-group mt-2">
             <label for="passwordRegister">Mật khẩu</label>
-            <input id="passwordRegister" v-model="passwordRegister" type="password" placeholder="Nhập mật khẩu" />
+            <input id="passwordRegister" v-model="passwordRegister" type="password" autocomplete="new-password" placeholder="Nhập mật khẩu" />
             <span v-if="errors.passwordRegister" class="error-text">{{ errors.passwordRegister }}</span>
             <i class="fas fa-lock input-icon"></i>
           </div>
 
           <div class="form-group mb-1">
             <label for="confirmPasswordRegister">Xác nhận mật khẩu</label>
-            <input id="confirmPasswordRegister" v-model="confirmPasswordRegister" type="password" placeholder="Nhập lại mật khẩu" />
+            <input id="confirmPasswordRegister" v-model="confirmPasswordRegister" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu" />
             <span v-if="errors.confirmPasswordRegister" class="error-text">{{ errors.confirmPasswordRegister }}</span>
             <i class="fas fa-lock input-icon"></i>
           </div>

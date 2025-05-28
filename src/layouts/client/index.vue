@@ -2,11 +2,21 @@
   <div class="music-app d-flex flex-column flex-sm-row" :style="{ backgroundImage: `url(${currentBackground})` }">
     <!-- Phần header mobile -->
     <div class="mobile-header d-flex d-sm-none align-items-center justify-content-between p-3">
-      <a-button type="text" @click="showDrawer">
-        <i class="fa-solid fa-bars"></i>
-      </a-button>
+      <div class="d-flex align-items-center">
+        <a-button type="text" @click="showDrawer" class="menu-btn">
+          <i class="fa-solid fa-bars"></i>
+        </a-button>
+        <a-button 
+          type="text" 
+          class="help-btn" 
+          @click.stop="showHelpModal"
+          style="padding: 0; width: 28px; height: 28px; border-radius: 50%; background-color: #444;"
+        >
+          <i class="fa-solid fa-question"></i>
+        </a-button>
+      </div>
 
-      <div class="ms-4">
+      <div class="ms-0 me-2">
         <i class="fa-solid fa-music me-1"></i>
         <p class="d-inline"><span class="text-white">TMusic</span>Streaming</p>
       </div>
@@ -15,24 +25,24 @@
       <a-dropdown :trigger="['click']" placement="bottomRight">
         <a-avatar 
           :size="36" 
-          src="require('@/assets/img/admin-logo.png')" 
+          :src="adminLogo" 
           class="cursor-pointer"
         />
         
         <template #overlay>
           <a-menu>
             <a-menu-item key="profile">
-              <i class="fa-solid fa-user me-2"></i>
-              Hồ sơ
+              <i class="fa-solid fa-user me-2 text-white"></i>
+              <span class="text-white">Hồ sơ</span>
             </a-menu-item>
             <a-menu-item key="settings">
-              <i class="fa-solid fa-gear me-2"></i>
-              Cài đặt
+              <i class="fa-solid fa-gear me-2 text-white"></i>
+              <span class="text-white">Cài đặt</span>
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item key="logout" @click="handleLogout">
-              <i class="fa-solid fa-right-from-bracket me-2"></i>
-              Đăng xuất
+              <i class="fa-solid fa-right-from-bracket me-2 text-white"></i>
+              <span class="text-white">Đăng xuất</span>
             </a-menu-item>
           </a-menu>
         </template>
@@ -56,7 +66,7 @@
             class="explore-drawer-btn"
           >
             <Icon icon="mdi:compass-outline" />
-            <span class="explore-text">Khám phá</span>
+            <span class="explore-text d-inline">Khám phá</span>
           </a-button>
         </div>
       </template>
@@ -146,7 +156,11 @@
       <playlist 
         :songs="filteredSongs" 
         :current-song="currentSong"
+        :available-playlists="playlists"
+        :current-playlist-id="currentPlaylistId"
         @select-song="selectSong"
+        @change-playlist="handleChangePlaylist"
+        @open-modal="showModal = true"
         class="d-none d-sm-block"
       />
     </div>
@@ -154,13 +168,24 @@
     <!-- Main content -->
     <div class="d-flex flex-column justify-content-center align-items-center w-100">
       <!-- Main header cho desktop -->
-      <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-3 px-4">
-        <h1><span class="text-white">TMusic</span>Streaming</h1>
+      <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-3 px-0">
+        <div class="d-flex align-items-center">
+          <h1><span class="text-white">TMusic</span>Streaming</h1>
+          <a-button 
+            type="text" 
+            class="help-btn" 
+            @click="showHelpModal"
+          >
+            <i class="fa-solid fa-question" 
+              style="color: #fff; font-size: 14px; background-color: #444; padding: 7px; border-radius: 50%;">
+            </i>
+          </a-button>
+        </div>
 
         <a-button 
           type="text" 
           @click="goToExplore"
-          class="explore-header-btn ms-4"
+          class="explore-header-btn"
         >
           <Icon icon="mdi:compass-outline" class="me-2" />
           Khám phá
@@ -276,6 +301,7 @@
       backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${tmusicbackground2})`,
       backgroundSize: 'cover',
       backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
       padding: 0
     }"
   >
@@ -365,14 +391,56 @@
       </div>
     </div>
   </a-drawer>
+
+  <!-- Modal xác nhận logout -->
+  <a-modal 
+    v-model:open="logoutModalVisible"
+    :footer="null"
+    :closable="false"
+    centered
+    class="logout-modal"
+  >
+    <div class="logout-modal-content">
+      <img 
+        :src="logoutImage"
+        alt="Tiếc nuối khi logout"
+        class="logout-image"
+      />
+      <p class="logout-message">Chúng tôi sẽ nhớ bạn lắm đó!</p>
+      <div class="logout-actions">
+        <a-button type="primary" @click="confirmLogout" danger>
+          <i class="fa-solid fa-right-from-bracket me-2"></i>
+          Đăng xuất
+        </a-button>
+        <a-button @click="logoutModalVisible = false">
+          <i class="fa-solid fa-xmark me-2"></i>
+          Ở lại
+        </a-button>
+      </div>
+    </div>
+  </a-modal>
+  <PlayListModal
+    v-if="showModal"
+    :available-playlists="playlists"
+    :current-playlist="currentPlaylist"
+    @close="showModal = false"
+    @change-playlist="handleChangePlaylist"
+  />
+  <HelpGuideModal 
+    v-model="helpModalVisible"
+    :steps="helpSteps"
+    @close="handleHelpModalClose"
+  />
 </template>
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
+import PlayListModal from '@/components/client/PlayListModal.vue'
 import FilterModal from '@/components/client/FilterModal.vue'
 import LyricWithComments from '@/components/client/LyricWithComments.vue'
+import HelpGuideModal from '@/components/client/HelpGuideModal.vue'
 import { Button, Drawer, Input } from 'ant-design-vue'
 import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
@@ -381,6 +449,9 @@ import { message } from 'ant-design-vue'
 import { getSongs } from '@/services/songService'
 import { useProfileStore } from '@/stores/useProfile.js'
 import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
+import logoutImage from '@/assets/client/guide/logout_done.png';
+import guideImage1 from '@/assets/client/guide/guide.png';
+import guideImage2 from '@/assets/client/guide/guide.png';
 
 import adminLogo from '@/assets/img/admin-logo.png';
 
@@ -422,6 +493,8 @@ const currentLyric = ref('');
 const currentAudioTime = ref(0);
 
 const karaokeMode = ref(false);
+
+const logoutModalVisible = ref(false);
 
 currentUser.value = useProfileStore().getProfile();
 
@@ -726,8 +799,77 @@ const currentBackground = computed(() => {
   return currentSong.value?.background || 'linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%)'
 })
 
+// Modal Guide
+const helpModalVisible = ref(false);
+const helpSteps = ref([
+  {
+    id: 1,
+    title: "Tìm kiếm bài hát",
+    description: "Sử dụng ô tìm kiếm để tìm bài hát theo tên, nghệ sĩ hoặc thể loại",
+    image: guideImage1
+  },
+  {
+    id: 2,
+    title: "Phát nhạc",
+    description: "Nhấn vào bài hát trong danh sách để phát, sử dụng các nút điều khiển để play/pause, chuyển bài",
+    image: guideImage2
+  }
+]);
+
+const showHelpModal = (e) => {
+  try {
+    e?.stopPropagation();
+    e?.preventDefault();
+    
+    // Đảm bảo steps có dữ liệu trước khi hiển thị
+    if (!helpSteps.value || helpSteps.value.length === 0) {
+      console.error('Help steps data is empty');
+      return;
+    }
+    
+    helpModalVisible.value = true;
+    console.log('Modal opened successfully');
+  } catch (error) {
+    console.error('Error opening help modal:', error);
+    message.error('Có lỗi khi mở hướng dẫn');
+  }
+};
+
+const handleHelpModalClose = () => {
+  helpModalVisible.value = false;
+};
+
+// Modal Playlist
+const showModal = ref(false);
+const currentPlaylistId = ref(null);
+const playlists = ref([
+  {
+    id: 1,
+    name: 'Playlist 1',
+  },
+  {
+    id: 2,
+    name: 'Playlist 2',
+  }
+]);
+const currentPlaylist = computed(() => {
+  return playlists.value.find(p => p.id === currentPlaylistId.value);
+});
+
+const handleSelectSong = (song) => {
+  currentSong.value = song;
+};
+
+const handleChangePlaylist = (playlist) => {
+  currentPlaylistId.value = playlist.id;
+  showModal.value = false;
+};
+
 // Đăng xuất 
-const handleLogout = async () => {
+const handleLogout = () => {
+  logoutModalVisible.value = true;
+};
+const confirmLogout = async () => {
   try {
     const response = await axiosInstance.get('/auth/logout');
     if (response.status === 200) {
@@ -738,8 +880,10 @@ const handleLogout = async () => {
     }
   } catch (error) {
     message.error("Đã có lỗi xảy ra!");
+  } finally {
+    logoutModalVisible.value = false;
   }
-}
+};
 
 //Sang trang Khám phá
 const goToExplore = async () => {
@@ -1438,5 +1582,67 @@ const goToExplore = async () => {
 
 .right-column::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 255, 218, 0.8);
+}
+</style>
+
+<style scoped>
+/* CSS cho modal logout */
+.logout-modal .ant-modal-content {
+  background: rgba(26, 26, 46, 0.95);
+  border-radius: 12px;
+  color: white;
+}
+
+.logout-modal .ant-modal-header {
+  background: transparent;
+  border-bottom: none;
+}
+
+.logout-modal .ant-modal-title {
+  color: white;
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.logout-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.logout-image {
+  width: 100%;
+  max-height: 450px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.logout-message {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.logout-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+</style>
+
+<style scoped>
+/* CSS cho help button */
+.help-btn {
+  margin-left: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  transition: all 0.3s;
+}
+
+.help-btn:hover {
+  color: #fff;
+  transform: scale(1.1);
 }
 </style>

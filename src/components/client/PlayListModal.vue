@@ -1,5 +1,4 @@
 <template>
-  <!-- Playlist Selection Modal -->
   <div class="playlist-modal" @click.self="$emit('close')">
     <div class="playlist-modal-content">
       <div class="modal-header">

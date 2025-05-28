@@ -24,7 +24,8 @@ import {
     Avatar,
     Empty,
     Comment,
-    Switch
+    Switch,
+    Carousel
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -64,6 +65,7 @@ app.use(Avatar)
 app.use(Empty)
 app.use(Comment)
 app.use(Switch)
+app.use(Carousel)
 app.use(formatDate)
 app.use(truncateWords)
 app.use(router)

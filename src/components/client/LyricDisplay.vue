@@ -31,6 +31,9 @@
       </div>
     </div>
   </div>
+  <div class="is-playing-btn" @click="togglePlayPause">
+    <i :class="[isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play']"></i>
+  </div>
 </template>
 
 <script setup>
@@ -46,12 +49,18 @@ const props = defineProps({
   karaokeMode: Boolean
 });
 
-const emit = defineEmits(['seek']);
+const emit = defineEmits(['seek', 'toggle-play']);
 
+const isPlaying = ref(true);
 const parsedLyrics = ref([]);
 const currentLineIndex = ref(-1);
 const currentPartIndex = ref(0);
 const animationInProgress = ref(false);
+
+const togglePlayPause = () => {
+  isPlaying.value = !isPlaying.value;
+  emit('toggle-play', isPlaying.value);
+};
 
 const handleLyricClick = (time) => {
   emit('seek', time);
@@ -396,6 +405,24 @@ watch(() => props.currentTime, (time) => {
                  0 0 20px rgba(57, 255, 20, 0.6),
                  0 0 30px rgba(57, 255, 20, 0.4);
   }
+}
+
+.is-playing-btn {
+  position: fixed;
+  color: var(--accent-color);
+  bottom: 10px;
+  right: 10px;
+  z-index: 1000;
+  padding: 12px 16px;
+  border-radius: 50%;
+  background: rgba(148, 209, 224, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.is-playing-btn:hover {
+  background: rgba(148, 209, 224, 0.8);
+  transform: scale(1.1);
 }
 
 /* Responsive design */

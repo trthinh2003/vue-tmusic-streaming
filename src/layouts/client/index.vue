@@ -109,7 +109,11 @@
         <playlist 
           :songs="filteredSongs" 
           :current-song="currentSong"
+          :available-playlists="playlists"
+          :current-playlist-id="currentPlaylistId"
           @select-song="selectSong"
+          @change-playlist="handleChangePlaylist"
+          @open-modal="showModal = true"
         />
       </div>
     </a-drawer>
@@ -227,7 +231,7 @@
           ref="playerRef"
           :current-song="currentSong"
           :is-playing="isPlaying"
-          :playlist="filteredSongs.length > 0 ? filteredSongs : songs"
+          :playlist="songs"
           @toggle-play="togglePlay"
           @next-song="nextSong"
           @prev-song="prevSong"
@@ -239,11 +243,12 @@
     </div>
   </div>
   <FilterModal 
-    v-model:open="visibleModalFilter"
+    v-model="visibleModalFilter"
     v-model:filters="filters"
     @apply-filter="applyFilter"
     @update:filters="updateFilters"
     @update:modelValue="visibleModalFilter = false"
+    @pause-play="handlePausePlay"
   />
   <a-button type="text" class="toggle-sidebar-btn me-2" @click="toggleRightDrawer">
     <i class="fa-solid fa-angle-left"></i>
@@ -420,11 +425,14 @@
     </div>
   </a-modal>
   <PlayListModal
-    v-if="showModal"
+    :open="showModal"
+    @update:open="showModal = $event"
     :available-playlists="playlists"
     :current-playlist="currentPlaylist"
+    @change-playlist="handlePlaylistChange"
+    @play-playlist="handlePlayPlaylist"
+    @refresh="fetchPlaylists"
     @close="showModal = false"
-    @change-playlist="handleChangePlaylist"
   />
   <HelpGuideModal 
     v-model="helpModalVisible"
@@ -446,7 +454,8 @@ import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getSongs } from '@/services/songService'
+import { getSongs, getSongByPlaylist } from '@/services/songService'
+import { getMyPlaylists } from '@/services/playlistService'
 import { useProfileStore } from '@/stores/useProfile.js'
 import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
 import logoutImage from '@/assets/client/guide/logout_done.png';
@@ -722,6 +731,11 @@ const togglePlay = () => {
   isPlaying.value = !isPlaying.value
 }
 
+// Dừng hát bài hát hiện tại tại component Player nếu có bài hát khác đc phát trong FilterModal
+const handlePausePlay = () => {
+  isPlaying.value = false
+}
+
 // Bài tiếp theo
 const nextSong = () => {
   const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id)
@@ -843,26 +857,109 @@ const handleHelpModalClose = () => {
 const showModal = ref(false);
 const currentPlaylistId = ref(null);
 const playlists = ref([
-  {
-    id: 1,
-    name: 'Playlist 1',
-  },
-  {
-    id: 2,
-    name: 'Playlist 2',
-  }
+  // {
+  //   id: 1,
+  //   name: 'Playlist 1',
+  // },
+  // {
+  //   id: 2,
+  //   name: 'Playlist 2',
+  // }
 ]);
+
+const selectedPlaylist = ref(null);
+const playlistSongs = ref([]);
+
+const handlePlaylistChange = (playlist) => {
+  currentPlaylistId.value = playlist?.id || null;
+  
+  // Nếu có playlist được chọn, load songs trong playlist
+  if (playlist) {
+    loadPlaylistSongs(playlist.id);
+  } else {
+    // Nếu không, load tất cả bài hát
+    loadAllSongs();
+  }
+};
+
+const handlePlayPlaylist = async (playlistId) => {
+  try {
+    currentPlaylistId.value = playlistId;
+    
+    const response = await getSongByPlaylist(playlistId);
+    console.log('Playlist songs:', response.data.data);
+    
+    originalPlaylist.value = response.data.data.map(song => ({
+      ...song,
+      isFavorite: false
+    }));
+    
+    songs.value = [...originalPlaylist.value];
+    
+    if (songs.value.length > 0) {
+      currentSong.value = songs.value[0];
+      isPlaying.value = true;
+    }
+    
+    showModal.value = false;
+  } catch (error) {
+    console.error('Error playing playlist:', error);
+    message.error('Không thể phát playlist');
+  }
+};
+
 const currentPlaylist = computed(() => {
   return playlists.value.find(p => p.id === currentPlaylistId.value);
 });
 
-const handleSelectSong = (song) => {
-  currentSong.value = song;
+const fetchPlaylists = async () => {
+  try {
+    const response = await getMyPlaylists();
+    playlists.value = response.data;
+  } catch (error) {
+    console.error('Error fetching playlists:', error);
+    message.error('Không thể tải danh sách playlist');
+  }
 };
 
-const handleChangePlaylist = (playlist) => {
-  currentPlaylistId.value = playlist.id;
-  showModal.value = false;
+const loadPlaylistSongs = async (playlistId) => {
+  try {
+    const response = await getSongsInPlaylist(playlistId);
+    songs.value = response.data.map(song => ({
+      ...song,
+      isFavorite: false
+    }));
+    return songs.value;
+  } catch (error) {
+    console.error('Error loading playlist songs:', error);
+    message.error('Không thể tải bài hát trong playlist');
+    return [];
+  }
+};
+
+const loadAllSongs = async () => {
+  try {
+    const response = await getSongs(1, 100);
+    songs.value = response.data.data.map(song => ({
+      ...song,
+      isFavorite: false
+    }));
+  } catch (error) {
+    console.error('Error loading all songs:', error);
+    message.error('Không thể tải danh sách bài hát');
+  }
+};
+
+onMounted(() => {
+  fetchPlaylists();
+});
+
+const handleChangePlaylist = (playlistId) => {
+  currentPlaylistId.value = playlistId;
+  
+  if (!playlistId) {
+    getSongsFromServer();
+  }
 };
 
 // Đăng xuất 

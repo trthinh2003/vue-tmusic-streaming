@@ -113,7 +113,7 @@ const vClickOutside = {
 .song-item {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 20px;
   margin: 5px -15px;
   border-radius: 5px;
   cursor: pointer;

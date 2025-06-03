@@ -126,12 +126,12 @@ const updateAvatar = ({ file, preview }) => {
 const submitForm = async (album) => {
 	try {
 		const formData = new FormData();
-		formData.append('Title', album.title);
-		formData.append('ReleaseDate', dayjs(album.releaseDate).format('YYYY-MM-DD'));
-		formData.append('ArtistId', album.artistIds);
-		if (newAlbum.value.avatar) {
-			formData.append('Image', newAlbum.value.avatar);
-		}
+		formData.append('title', album.title);
+        formData.append('releaseDate', dayjs(album.releaseDate).format('YYYY-MM-DD'));
+        formData.append('artistId', album.artistIds);
+        if (newAlbum.value.avatar) {
+            formData.append('image', newAlbum.value.avatar);
+        }
 		const response = await createAlbum(formData);
 		message.success(response.data.message);
         fetchAlbums();

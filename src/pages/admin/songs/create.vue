@@ -523,7 +523,7 @@ const exportLyricsFile = (format = 'txt') => {
 
 onMounted(async () => {
     try {
-        const albumRes = await getAlbums();
+        const albumRes = await getAlbums(1, 100);
         albums.value = albumRes.data.data.map(album => ({
             value: album.id,
             label: album.title

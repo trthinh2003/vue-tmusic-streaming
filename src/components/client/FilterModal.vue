@@ -3,7 +3,7 @@
     :open="modelValue"
     :footer="false"
     class="music-modal"
-    @click="handleCancel"
+    @cancel="handleCancel"
     :width="800"
     style="top: 50px;"
   >
@@ -29,7 +29,7 @@
       </a-input-search>
     </div>
 
-    <!-- Tabs với hiệu ứng âm nhạc -->
+    <!-- Tabs -->
     <a-tabs v-model:activeKey="activeTab" class="music-tabs" centered scrollable>
       <a-tab-pane key="all" tab="🎼 Tất cả"></a-tab-pane>
       <a-tab-pane key="songs" tab="🎵 Bài hát"></a-tab-pane>
@@ -46,12 +46,18 @@
         v-for="(song, index) in filteredSongs"
         :key="index"
         @click="playSong(song)"
+        :class="{ 'active-song': currentSong?.id === song.id }"
       >
         <div class="music-item-content">
           <div class="music-cover">
             <img :src="song.cover" alt="thumbnail" width="25px"/>
             <div class="play-icon">
-              <play-circle-filled />
+              <template v-if="currentSong?.id === song.id && isPlaying">
+                <pause-circle-filled />
+              </template>
+              <template v-else>
+                <play-circle-filled />
+              </template>
             </div>
           </div>
           <div class="music-info">
@@ -83,27 +89,44 @@
     
     <!-- Danh sách album -->
     <div class="album-list-container" v-if="activeTab === 'album' && !selectedAlbum">
-      <div class="album-grid">
-        <div 
-          class="album-item" 
-          v-for="(album, index) in albums" 
-          :key="index"
-          @click="selectAlbum(album)"
-        >
-          <div class="album-cover">
-            <img :src="album.cover" alt="album cover"/>
-            <div class="album-play-icon">
-              <play-circle-filled />
+      <a-spin :spinning="isLoadingAlbums">
+        <div class="album-grid">
+          <div 
+            class="album-item" 
+            v-for="(album, index) in albums" 
+            :key="index"
+            @click="selectAlbum(album)"
+          >
+            <div class="album-cover">
+              <img :src="album.imageUrl" alt="album cover"/>
+              <div class="album-play-icon">
+                <play-circle-filled />
+              </div>
+            </div>
+            <div class="album-info">
+              <h3 class="album-title">{{ album.title }}</h3>
+              <p class="album-artist">{{ album.artist }}</p>
+              <p class="album-year">{{ album.realeaseDate }} • {{ album.songs.length }} bài hát</p>
             </div>
           </div>
-          <div class="album-info">
-            <h3 class="album-title">{{ album.title }}</h3>
-            <p class="album-artist">{{ album.artist }}</p>
-            <p class="album-year">{{ album.year }} • {{ album.songs.length }} bài hát</p>
-          </div>
         </div>
-      </div>
+        <div class="album-pagination">
+          <a-pagination
+            v-model:current="currentAlbumPage"
+            :total="totalAlbums"
+            :pageSize="albumPageSize"
+            :showSizeChanger="false"
+            @change="fetchAlbums"
+            :disabled="isLoadingAlbums"
+          />
+        </div>
+      </a-spin>
     </div>
+    <audio 
+      ref="audioPlayer" 
+      @ended="handleSongEnded"
+      style="display: none;"
+    />
 
     <!-- Danh sách bài hát trong album đã chọn -->
     <div class="album-songs-container" v-if="activeTab === 'album' && selectedAlbum">
@@ -112,11 +135,11 @@
           <arrow-left-outlined /> Quay lại
         </a-button>
         <div class="album-detail">
-          <img :src="selectedAlbum.cover" alt="album cover" class="album-detail-cover"/>
+          <img :src="selectedAlbum.imageUrl" alt="album cover" class="album-detail-cover"/>
           <div class="album-detail-info">
             <h2 class="album-detail-title">{{ selectedAlbum.title }}</h2>
             <p class="album-detail-artist">{{ selectedAlbum.artist }}</p>
-            <p class="album-detail-meta">{{ selectedAlbum.year }} • {{ selectedAlbum.songs.length }} bài hát</p>
+            <p class="album-detail-meta">{{ selectedAlbum.realeaseDate }} • {{ selectedAlbum.songs.length }} bài hát</p>
           </div>
         </div>
       </div>
@@ -127,6 +150,7 @@
           v-for="(song, index) in selectedAlbum.songs"
           :key="index"
           @click="playSong(song)"
+          :class="{ 'active-song': currentSong?.id === song.id }"
         >
           <div class="music-item-content">
             <div class="music-number">{{ index + 1 }}</div>
@@ -188,6 +212,57 @@
     
     <!-- Footer với nút bấm -->
     <div class="music-footer">
+      <!-- Player Control -->
+      <div class="player-controls" v-if="currentSong && showPlayerControls">
+        <div class="player-close" @click="showPlayerControls = false">
+          <close-outlined />
+        </div>
+        
+        <div class="player-info">
+          <img :src="currentSong.cover" width="40" height="40" />
+          <div>
+            <div class="song-title">{{ currentSong.title }}</div>
+            <div class="song-artist">{{ currentSong.artist }}</div>
+          </div>
+        </div>
+        
+        <div class="player-progress">
+          <a-slider 
+            v-model:value="currentTime" 
+            :max="duration" 
+            @change="seekAudio"
+            :tooltip="false"
+            :step="0.01"
+          />
+          <div class="time-display">
+            <span>{{ formatTime(currentTime) }}</span>
+            <span>{{ formatTime(duration) }}</span>
+          </div>
+        </div>
+        
+        <div class="player-buttons">
+          <button @click="playPrevious">
+            <step-backward-outlined />
+          </button>
+          <button @click="togglePlay">
+            <play-circle-filled v-if="!isPlaying" />
+            <pause-circle-filled v-else />
+          </button>
+          <button @click="playNext">
+            <step-forward-outlined />
+          </button>
+        </div>
+      </div>
+
+      <!-- Nút hiển thị player controls khi đang phát nhạc -->
+      <div class="mini-player" v-if="currentSong && !showPlayerControls" @click="showPlayerControls = true">
+        <img :src="currentSong.cover" width="30" height="30" />
+        <div class="mini-player-info">
+          <span>{{ currentSong.title }}</span>
+          <play-circle-filled v-if="!isPlaying" />
+          <pause-circle-filled v-else />
+        </div>
+      </div>
       <a-button class="footer-btn cancel-btn" @click="handleCancel">Đóng</a-button>
       <a-button v-if="activeTab === 'option'" class="footer-btn apply-btn" type="primary" @click="handleApply">
         <template #icon><check-outlined /></template>
@@ -195,20 +270,82 @@
       </a-button>
     </div>
   </a-modal>
+  <!-- Modal chọn playlist -->
+  <a-modal
+    v-model:open="showPlaylistModal"
+    :footer="null"
+    width="400px"
+    centered
+  >
+    <div class="playlist-modal-header mb-3" 
+      style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 1.1rem;
+        font-weight: bold; 
+        color: white;
+      "
+    >
+      <plus-outlined />
+      Thêm vào playlist
+    </div>
+    <div class="playlist-modal-content">
+      <h3 v-if="selectedSongForPlaylist" class="song-title">
+        Thêm "<span>{{ selectedSongForPlaylist.title }}</span>" vào:
+      </h3>
+      
+      <div class="playlist-list">
+        <div 
+          v-for="playlist in playlists" 
+          :key="playlist.id"
+          class="playlist-item"
+          @click="addSongToPlaylist(playlist.id)"
+        >
+          <div class="playlist-info">
+            <div class="playlist-name">{{ playlist.name }}</div>
+            <div class="playlist-count">{{ playlist.songCount }} bài hát</div>
+          </div>
+          <div class="playlist-add-btn">
+            <plus-outlined />
+          </div>
+        </div>
+      </div>
+      
+      <div class="create-playlist">
+        <a-input
+          v-model:value="newPlaylistName"
+          placeholder="Tạo playlist mới"
+          size="large"
+        >
+          <template #addonAfter>
+            <a-button 
+              type="primary" 
+              @click="createNewPlaylist"
+              :disabled="!newPlaylistName.trim()"
+            >
+              Tạo
+            </a-button>
+          </template>
+        </a-input>
+      </div>
+    </div>
+  </a-modal>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, onBeforeUnmount, nextTick } from 'vue';
 import { 
   PlayCircleFilled, SearchOutlined, ArrowLeftOutlined,
   MoreOutlined, PlusOutlined, HeartOutlined, 
   DownloadOutlined, ShareAltOutlined, UserOutlined,
   FireOutlined, ThunderboltOutlined, StarOutlined,
-  CrownOutlined, RocketOutlined, CheckOutlined
+  CrownOutlined, RocketOutlined, CheckOutlined, PauseCircleFilled,
+  StepBackwardOutlined, StepForwardOutlined, CloseOutlined
 } from '@ant-design/icons-vue';
 
 import { message } from 'ant-design-vue';
 import { getSongs } from '@/services/songService';
+import { getAlbumWithSongs } from '@/services/albumService';
+import { getMyPlaylists, addSongsToPlaylist } from '@/services/playlistService';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -225,143 +362,482 @@ const props = defineProps({
 const emit = defineEmits([
   'update:modelValue',
   'update:filters',
-  'apply-filter'
+  'apply-filter',
+  'pause-play'
 ]);
 
 const localFilters = ref({ ...props.filters });
 const activeTab = ref("all");
 const selectedAlbum = ref(null);
+const currentSong = ref(null);
+const isPlaying = ref(false);
+const audioPlayer = ref(null);
+const isLoadingAudio = ref(false);
+const loadingAbortController = ref(null);
 
 const filteredSongs = ref([]);
 const albums = ref([
-  {
-    id: 1,
-    title: "Những Bài Hát Hay Nhất",
-    artist: "Sơn Tùng M-TP",
-    cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
-    year: "2023",
-    songs: [
-      {
-        id: 101,
-        title: "Chúng Ta Của Hiện Tại",
-        artist: "Sơn Tùng M-TP",
-        cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
-        duration: "4:21"
-      },
-      {
-        id: 102,
-        title: "Muộn Rồi Mà Sao Còn",
-        artist: "Sơn Tùng M-TP",
-        cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
-        duration: "3:45"
-      },
-      {
-        id: 103,
-        title: "Hãy Trao Cho Anh",
-        artist: "Sơn Tùng M-TP ft. Snoop Dogg",
-        cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
-        duration: "4:05"
-      }
-    ]
-  },
-  {
-    id: 2,
-    title: "Tình Yêu Không Hẹn Trước",
-    artist: "Noo Phước Thịnh",
-    cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
-    year: "2022",
-    songs: [
-      {
-        id: 201,
-        title: "Tình Yêu Không Hẹn Trước",
-        artist: "Noo Phước Thịnh",
-        cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
-        duration: "4:12"
-      },
-      {
-        id: 202,
-        title: "Em Đã Thương Người Ta Hơn Anh",
-        artist: "Noo Phước Thịnh",
-        cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
-        duration: "3:58"
-      }
-    ]
-  },
-  {
-    id: 3,
-    title: "Đen Đá Không Đường",
-    artist: "Đen Vâu",
-    cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
-    year: "2021",
-    songs: [
-      {
-        id: 301,
-        title: "Bài Này Chill Phết",
-        artist: "Đen Vâu ft. MIN",
-        cover: "https://i.scdn.co/image/ab67616d00001e02a3a5a7e6c2a8a5e8e9a3b5e2",
-        duration: "4:38"
-      },
-      {
-        id: 302,
-        title: "Đi Về Nhà",
-        artist: "Đen Vâu ft. JustaTee",
-        cover: "https://i.scdn.co/image/ab67616d00001e02a3a5a7e6c2a8a5e8e9a3b5e2",
-        duration: "4:12"
-      },
-      {
-        id: 303,
-        title: "Mang Tiền Về Cho Mẹ",
-        artist: "Đen Vâu ft. Nguyên Thảo",
-        cover: "https://i.scdn.co/image/ab67616d00001e02a3a5a7e6c2a8a5e8e9a3b5e2",
-        duration: "5:01"
-      }
-    ]
-  },
-  {
-    id: 4,
-    title: "Nhạc Trẻ 2023",
-    artist: "Nhiều Nghệ Sĩ",
-    cover: "https://i.scdn.co/image/ab67616d00001e0295f754318336a07e85ec59bc",
-    year: "2023",
-    songs: [
-      {
-        id: 401,
-        title: "Có Chơi Có Chịu",
-        artist: "Karik ft. OnlyC",
-        cover: "https://i.scdn.co/image/ab67616d00001e02b8d8e8e8e8e8e8e8e8e8e8e8",
-        duration: "3:45"
-      },
-      {
-        id: 402,
-        title: "Thức Giấc",
-        artist: "Da LAB",
-        cover: "https://i.scdn.co/image/ab67616d00001e02b8d8e8e8e8e8e8e8e8e8e8e8",
-        duration: "4:12"
-      },
-      {
-        id: 403,
-        title: "Sài Gòn Đau Lòng Quá",
-        artist: "Hứa Kim Tuyền ft. Hoàng Duyên",
-        cover: "https://i.scdn.co/image/ab67616d00001e02b8d8e8e8e8e8e8e8e8e8e8e8",
-        duration: "5:20"
-      }
-    ]
-  }
+  // {
+  //   id: 1,
+  //   title: "Những Bài Hát Hay Nhất",
+  //   artist: "Sơn Tùng M-TP",
+  //   imageUrl: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+  //   realeaseDate: "2023",
+  //   songs: [
+  //     {
+  //       id: 101,
+  //       title: "Chúng Ta Của Hiện Tại",
+  //       artist: "Sơn Tùng M-TP",
+  //       cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+  //       duration: "4:21"
+  //     },
+  //     {
+  //       id: 102,
+  //       title: "Muộn Rồi Mà Sao Còn",
+  //       artist: "Sơn Tùng M-TP",
+  //       cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+  //       duration: "3:45"
+  //     },
+  //     {
+  //       id: 103,
+  //       title: "Hãy Trao Cho Anh",
+  //       artist: "Sơn Tùng M-TP ft. Snoop Dogg",
+  //       cover: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+  //       duration: "4:05"
+  //     }
+  //   ]
+  // },
 ]);
+const showPlaylistModal = ref(false);
+const selectedSongForPlaylist = ref(null);
+const playlists = ref([
+  // { id: 1, name: "Playlist yêu thích", songCount: 12 },
+  // { id: 2, name: "Nhạc chill", songCount: 8 },
+  // { id: 3, name: "Tập gym", songCount: 15 },
+  // { id: 4, name: "Lái xe", songCount: 20 },
+]);
+const newPlaylistName = ref('');
+
+const currentTime = ref(0);
+const duration = ref(0);
+const showPlayerControls = ref(true);
+const isPlayingFromAlbum = ref(false);
+
+const updateTime = () => {
+  if (audioPlayer.value && currentSong.value) {
+    currentTime.value = audioPlayer.value.currentTime;
+    if (isNaN(audioPlayer.value.duration) || audioPlayer.value.duration === 0) {
+      const apiDuration = convertDurationToSeconds(currentSong.value.duration);
+      if (apiDuration > 0) {
+        duration.value = apiDuration;
+      }
+    } else {
+      duration.value = audioPlayer.value.duration;
+    }
+  }
+};
+
+const seekAudio = (value) => {
+  if (audioPlayer.value) {
+    audioPlayer.value.currentTime = value;
+    currentTime.value = value;
+  }
+};
+
+const formatTime = (seconds) => {
+  if (isNaN(seconds) || seconds <= 0) {
+    if (currentSong.value?.duration) {
+      const apiDuration = convertDurationToSeconds(currentSong.value.duration);
+      if (apiDuration > 0 && seconds === duration.value) {
+        return currentSong.value.duration;
+      }
+    }
+    return "0:00";
+  }
+  
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
+const togglePlay = () => {
+  if (isPlaying.value) {
+    audioPlayer.value.pause();
+  } else {
+    audioPlayer.value.play();
+  }
+  isPlaying.value = !isPlaying.value;
+};
 
 watch(() => props.filters, (newVal) => {
   localFilters.value = { ...newVal };
 }, { deep: true });
 
-const playSong = (song) => {
-  console.log("Phát bài hát:", song.title);
+watch(() => currentSong.value, (newSong) => {
+  if (newSong) {
+    const apiDuration = convertDurationToSeconds(newSong.duration);
+    if (apiDuration > 0) {
+      duration.value = apiDuration;
+    }
+  }
+}, { immediate: true });
+
+const convertDurationToSeconds = (durationStr) => {
+  if (!durationStr) return 0;
+  if (!isNaN(durationStr)) return parseFloat(durationStr);
+  const parts = durationStr.split(':');
+  if (parts.length === 2) {
+    return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+  } else if (parts.length === 3) {
+    return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+  }
+  console.log('Invalid duration format:', durationStr);
+  return 0;
+};
+
+const isBrowserActive = () => {
+  return !document.hidden && document.visibilityState === 'visible';
+};
+
+const playSong = async (song) => {
+  if (!isBrowserActive()) {
+    console.log("Trình duyệt không active, không phát nhạc");
+    return;
+  }
+  
+  if (!song || !song.audio) {
+    message.error("Bài hát không có dữ liệu âm thanh");
+    return;
+  }
+
+  // Hủy loading trước đó nếu có
+  if (loadingAbortController.value) {
+    loadingAbortController.value.abort();
+  }
+  
+  // Tạo abort controller mới
+  loadingAbortController.value = new AbortController();
+  const signal = loadingAbortController.value.signal;
+
+  emit('pause-play');
+
+  if (currentSong.value?.id === song.id) {
+    togglePlay();
+    return;
+  }
+
+  try {
+    isLoadingAudio.value = true;
+    if (signal.aborted) {
+      console.log("Play song đã bị abort");
+      return;
+    }
+    if (audioPlayer.value) {
+      audioPlayer.value.pause();
+      audioPlayer.value.currentTime = 0;
+      // Chờ một chút để đảm bảo audio đã dừng hoàn toàn
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (signal.aborted) {
+        console.log("Play song đã bị abort sau khi pause");
+        return;
+      }
+    }
+    currentSong.value = song;
+    currentTime.value = 0;
+    showPlayerControls.value = true;
+    isPlayingFromAlbum.value = selectedAlbum.value 
+      ? selectedAlbum.value.songs.some(s => s.id === song.id)
+      : false;
+    
+    // Set duration từ API trước
+    const apiDuration = convertDurationToSeconds(song.duration);
+    duration.value = apiDuration > 0 ? apiDuration : 0;
+    
+    await nextTick();
+    
+    if (signal.aborted) {
+      console.log("Play song đã bị abort sau nextTick");
+      return;
+    }
+    
+    if (!audioPlayer.value) {
+      throw new Error("Trình phát nhạc không khả dụng");
+    }
+
+    audioPlayer.value.removeEventListener('loadedmetadata', handleMetadataLoaded);
+    audioPlayer.value.removeEventListener('error', handleAudioError);
+    
+    const handleMetadata = () => {
+      if (!signal.aborted) {
+        handleMetadataLoaded();
+      }
+    };
+    
+    const handleError = (error) => {
+      if (!signal.aborted) {
+        handleAudioError(error);
+      }
+    };
+    
+    audioPlayer.value.addEventListener('loadedmetadata', handleMetadata, { once: true });
+    audioPlayer.value.addEventListener('error', handleError, { once: true });
+    
+    audioPlayer.value.src = song.audio;
+    audioPlayer.value.currentTime = 0;
+    
+    // Load audio trước khi play
+    audioPlayer.value.load();
+    
+    // Check abort trước khi play
+    if (signal.aborted) {
+      console.log("Play song đã bị abort trước khi play");
+      return;
+    }
+    
+    const playPromise = audioPlayer.value.play();
+    
+    if (playPromise !== undefined) {
+      await playPromise;
+      
+      // Check lại abort sau khi play thành công
+      if (!signal.aborted) {
+        isPlaying.value = true;
+        isLoadingAudio.value = false;
+      } else {
+        audioPlayer.value.pause();
+      }
+    }
+    
+  } catch (error) {
+    isLoadingAudio.value = false;
+    
+    // Kiểm tra loại lỗi
+    if (error.name === 'AbortError' || 
+        error.message.includes('aborted') || 
+        signal.aborted) {
+      console.log("Audio loading bị abort, không retry");
+      return;
+    }
+    
+    console.error("Lỗi khi phát nhạc:", error);
+    handlePlayError(error, song);
+  }
+};
+
+const handleMetadataLoaded = () => {
+  if (audioPlayer.value && currentSong.value) {
+    const audioDuration = audioPlayer.value.duration;
+    
+    if (isNaN(audioDuration) || audioDuration === 0) {
+      const apiDuration = convertDurationToSeconds(currentSong.value.duration);
+      duration.value = apiDuration > 0 ? apiDuration : 0;
+    } else {
+      duration.value = audioDuration;
+    }
+  }
+};
+
+const handleAudioError = () => {
+  // message.error("Lỗi khi tải bài hát");
+  consle.log("Lỗi khi tải bài hát");
+  stopAudio();
+};
+
+const handlePlayError = (error, song) => {
+  // Không retry nếu là abort error
+  if (error.name === 'AbortError' || 
+      error.message.includes('aborted') ||
+      loadingAbortController.value?.signal.aborted) {
+    console.log("Không retry vì đã bị abort");
+    return;
+  }
+  
+  if (error.name === 'DOMException' && 
+      (error.message.includes('fetching process') || 
+       error.message.includes('aborted'))) {
+    console.warn("Audio fetching bị abort, thử lại sau 500ms");
+    setTimeout(() => {
+      // Chỉ retry nếu chưa bị abort
+      if (!loadingAbortController.value?.signal.aborted) {
+        playSong(song);
+      }
+    }, 500);
+  } else {
+    message.error("Không thể phát bài hát này");
+    stopAudio();
+    
+    // Thử phát bài tiếp theo nếu có
+    setTimeout(() => {
+      if (!loadingAbortController.value?.signal.aborted) {
+        if (isPlayingFromAlbum.value && selectedAlbum.value) {
+          playNextInAlbum();
+        } else {
+          playNext();
+        }
+      }
+    }, 300);
+  }
+};
+
+const playNext = async () => {
+  if (!currentSong.value || !filteredSongs.value?.length) {
+    stopAudio();
+    return;
+  }
+  if (loadingAbortController.value) {
+    loadingAbortController.value.abort();
+  }
+
+  // Nếu đang phát từ album
+  if (isPlayingFromAlbum.value && selectedAlbum.value) {
+    const currentIndex = selectedAlbum.value.songs.findIndex(song => song.id === currentSong.value.id);
+    if (currentIndex < selectedAlbum.value.songs.length - 1) {
+      await playSong(selectedAlbum.value.songs[currentIndex + 1]);
+    } else {
+      await playSong(selectedAlbum.value.songs[0]);
+    }
+    return;
+  }
+  
+  const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id);
+  let nextSong = null;
+  
+  if (currentIndex < filteredSongs.value.length - 1) {
+    nextSong = filteredSongs.value[currentIndex + 1];
+  } else {
+    nextSong = filteredSongs.value[0];
+  }
+  
+  if (nextSong) {
+    await playSong(nextSong);
+  } else {
+    stopAudio();
+  }
+};
+
+const playNextInAlbum = () => {
+  if (!currentSong.value || !selectedAlbum.value?.songs?.length) {
+    stopAudio();
+    return;
+  }
+  
+  const currentIndex = selectedAlbum.value.songs.findIndex(song => song.id === currentSong.value.id);
+  let nextSong = null;
+  
+  if (currentIndex < selectedAlbum.value.songs.length - 1) {
+    nextSong = selectedAlbum.value.songs[currentIndex + 1];
+  } else {
+    nextSong = selectedAlbum.value.songs[0];
+  }
+  
+  if (nextSong) {
+    playSong(nextSong);
+  } else {
+    stopAudio();
+  }
+};
+
+const playPrevious = async () => {
+  if (!currentSong.value) return;
+  
+  // Hủy loading hiện tại
+  if (loadingAbortController.value) {
+    loadingAbortController.value.abort();
+  }
+  
+  // Nếu đang phát từ album
+  if (isPlayingFromAlbum.value && selectedAlbum.value) {
+    const currentIndex = selectedAlbum.value.songs.findIndex(song => song.id === currentSong.value.id);
+    if (currentIndex > 0) {
+      await playSong(selectedAlbum.value.songs[currentIndex - 1]);
+    } else {
+      await playSong(selectedAlbum.value.songs[selectedAlbum.value.songs.length - 1]);
+    }
+    return;
+  }
+  
+  // Phát bài trước đó trong danh sách chung
+  const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id);
+  if (currentIndex > 0) {
+    await playSong(filteredSongs.value[currentIndex - 1]);
+  } else {
+    await playSong(filteredSongs.value[filteredSongs.value.length - 1]);
+  }
+};
+
+const handleSongEnded = () => {
+  isPlaying.value = false;
+  currentTime.value = 0;
+  
+  try {
+    if (isPlayingFromAlbum.value && selectedAlbum.value) {
+      playNextInAlbum();
+    } else {
+      playNext();
+    }
+  } catch (error) {
+    console.error("Lỗi khi chuyển bài:", error);
+    message.error("Không thể phát bài hát tiếp theo");
+    stopAudio();
+  }
 };
 
 const handleSongAction = (action, song) => {
-  console.log(`Thao tác "${action}" trên bài hát:`, song);
+  if (action === 'add') {
+    handleAddToPlaylist(song);
+  } else {
+    console.log(`Thao tác "${action}" trên bài hát:`, song);
+    message.info(`Đã chọn thao tác "${action}" cho bài hát "${song.title}"`);
+  }
 };
 
+const stopAudio = () => {
+  // Hủy loading nếu đang load
+  if (loadingAbortController.value) {
+    loadingAbortController.value.abort();
+    loadingAbortController.value = null;
+  }
+  
+  isLoadingAudio.value = false;
+  
+  if (!audioPlayer.value) return;
+  
+  audioPlayer.value.removeEventListener('loadedmetadata', handleMetadataLoaded);
+  audioPlayer.value.removeEventListener('error', handleAudioError);
+  
+  try {
+    audioPlayer.value.pause();
+    audioPlayer.value.currentTime = 0;
+  } catch (error) {
+    console.error("Lỗi khi dừng audio:", error);
+  } finally {
+    isPlaying.value = false;
+    currentSong.value = null;
+  }
+};
+
+const playWithRetry = async (song, retryCount = 0) => {
+  if (retryCount > 2) {
+    message.error("Không thể phát bài hát sau nhiều lần thử");
+    stopAudio();
+    return;
+  }
+
+  try {
+    await playSong(song);
+  } catch (error) {
+    console.warn(`Thử lại phát nhạc (lần ${retryCount + 1})`, error);
+    await new Promise(resolve => setTimeout(resolve, 300 * (retryCount + 1)));
+    await playWithRetry(song, retryCount + 1);
+  }
+};
+
+
 const handleCancel = () => {
+  if (loadingAbortController.value) {
+    loadingAbortController.value.abort();
+  }
+  stopAudio();
   emit('update:modelValue', false);
 };
 
@@ -375,17 +851,247 @@ const selectAlbum = (album) => {
   selectedAlbum.value = album;
 };
 
+//Xử lý modal playlist
+const handleAddToPlaylist = (song) => {
+  selectedSongForPlaylist.value = song;
+  showPlaylistModal.value = true;
+};
+
+const addSongToPlaylist = async (playlistId) => {
+  try {
+    console.log(playlistId, selectedSongForPlaylist.value.id);
+    const res = await addSongsToPlaylist(playlistId, selectedSongForPlaylist.value.id);
+    message.success(`Đã thêm "${selectedSongForPlaylist.value.title}" vào playlist`);
+    
+    const myPlaylistRes = await getMyPlaylists();
+    playlists.value = myPlaylistRes.data;
+    
+    showPlaylistModal.value = false;
+  } catch (error) {
+    console.error("Lỗi khi thêm bài hát vào playlist:", error);
+    message.error("Bài hát này đã có trong playlist của bạn.");
+  }
+};
+
+const createNewPlaylist = () => {
+  if (!newPlaylistName.value.trim()) {
+    message.error('Vui lòng nhập tên playlist');
+    return;
+  }
+  
+  const newPlaylist = {
+    id: playlists.value.length + 1,
+    name: newPlaylistName.value.trim(),
+    songCount: 0
+  };
+  
+  playlists.value.push(newPlaylist);
+  newPlaylistName.value = '';
+  message.success(`Đã tạo playlist "${newPlaylist.name}"`);
+};
+
+//Xử lý phân trang album
+const currentAlbumPage = ref(1);
+const albumPageSize = ref(6); // Số album mỗi trang
+const totalAlbums = ref(0);
+const isLoadingAlbums = ref(false);
+const fetchAlbums = async (page = 1, pageSize = albumPageSize.value) => {
+  try {
+    isLoadingAlbums.value = true;
+    const albumRes = await getAlbumWithSongs(page, pageSize);
+    console.log('API Response:', albumRes);
+    
+    if (albumRes.data && albumRes.data.pagination) {
+      albums.value = albumRes.data.data;
+      totalAlbums.value = albumRes.data.pagination.totalItems;
+      currentAlbumPage.value = page;
+    } else {
+      console.error('Invalid API response structure', albumRes);
+    }
+  } catch (error) {
+    console.error("Lỗi khi tải album:", error);
+    message.error("Không thể tải danh sách album");
+  } finally {
+    isLoadingAlbums.value = false;
+  }
+};
+
+watch(() => props.modelValue, (newVal) => {
+  if (!newVal) {
+    if (loadingAbortController.value) {
+      loadingAbortController.value.abort();
+    }
+    stopAudio();
+  }
+}, { immediate: true });
+
+watch(() => currentSong.value, (newSong) => {
+  if (newSong) {
+    duration.value = convertDurationToSeconds(newSong.duration) || 0;
+  }
+});
+
+watch(() => activeTab.value, (newTab) => {
+  if (newTab === 'album') {
+    if (currentAlbumPage.value !== 1) {
+      fetchAlbums(1, 6);
+    }
+  }
+});
+
 onMounted(async () => {
   try {
-    const response = await getSongs();
-    filteredSongs.value = response.data.data;
+    const songRes = await getSongs();
+    filteredSongs.value = songRes.data.data;
+    await fetchAlbums(1, 6);
+    const myPlaylistRes = await getMyPlaylists();
+    playlists.value = myPlaylistRes.data;
+    
+    if (audioPlayer.value) {
+      audioPlayer.value.addEventListener('timeupdate', updateTime);
+      audioPlayer.value.addEventListener('loadedmetadata', () => {
+        duration.value = audioPlayer.value.duration;
+      });
+      audioPlayer.value.addEventListener('ended', handleSongEnded);
+    }
   } catch (error) {
     console.log(error);
   }
-})
+});
+
+onBeforeUnmount(() => {
+  if (loadingAbortController.value) {
+    loadingAbortController.value.abort();
+  }
+  stopAudio();
+  if (audioPlayer.value) {
+    audioPlayer.value.removeEventListener('timeupdate', updateTime);
+    audioPlayer.value.removeEventListener('loadedmetadata', () => {
+      duration.value = audioPlayer.value.duration;
+    });
+    audioPlayer.value.removeEventListener('ended', handleSongEnded);
+  }
+});
 </script>
 
 <style scoped>
+/* Active song */
+.active-song {
+  background: rgba(0, 219, 222, 0.1) !important;
+  border-left: 3px solid #00dbde;
+}
+
+.active-song .music-title {
+  color: #00dbde !important;
+}
+
+/* Player controls */
+.player-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 25px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 25%;
+}
+
+.player-progress {
+  flex: 1;
+  padding: 0 20px;
+}
+
+.player-buttons {
+  display: flex;
+  gap: 15px;
+  width: 25%;
+  justify-content: flex-end;
+}
+
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.song-title {
+  font-weight: bold;
+  color: white;
+}
+
+.song-artist {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Player close button */
+.player-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 5px;
+  z-index: 1;
+}
+
+.player-close:hover {
+  color: white;
+}
+
+/* Mini player */
+.mini-player {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 15px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+  max-width: 200px;
+}
+
+.mini-player:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.mini-player img {
+  border-radius: 4px;
+}
+
+.mini-player-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+}
+
+.mini-player-info span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: white;
+  font-size: 14px;
+}
+
 /* Modal chung */
 .music-modal :global(.ant-modal-content) {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -946,5 +1652,165 @@ onMounted(async () => {
     width: 100px;
     height: 100px;
   }
+}
+</style>
+
+<style scoped>
+/* Playlist modal styles */
+.playlist-modal-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.playlist-modal-content .song-title {
+  color: white;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.playlist-modal-content .song-title span {
+  color: #00dbde;
+  font-weight: 600;
+}
+
+.playlist-list {
+  margin-bottom: 20px;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.playlist-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.playlist-info {
+  flex: 1;
+}
+
+.playlist-name {
+  color: white;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.playlist-count {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.playlist-add-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 219, 222, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00dbde;
+}
+
+.create-playlist {
+  margin-top: 20px;
+}
+
+.create-playlist :deep(.ant-input-group-addon) {
+  background: transparent !important;
+  border: none !important;
+}
+
+.create-playlist :deep(.ant-input) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.create-playlist :deep(.ant-btn) {
+  height: 40px;
+  background: linear-gradient(90deg, #00dbde 0%, #fc00ff 100%);
+  border: none;
+}
+
+/* Modal header style */
+:deep(.ant-modal .ant-modal-title) {
+  color: white !important;
+  font-weight: 600;
+}
+
+:deep(.ant-modal .ant-modal-content) {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 12px;
+}
+
+:deep(.ant-modal .ant-modal-close-x) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+</style>
+
+<style scoped>
+/* Album pagination */
+.album-pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.album-pagination :deep(.ant-pagination-item),
+.album-pagination :deep(.ant-pagination-prev),
+.album-pagination :deep(.ant-pagination-next),
+.album-pagination :deep(.ant-pagination-jump-prev),
+.album-pagination :deep(.ant-pagination-jump-next) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 8px;
+  margin: 0 4px;
+}
+
+.album-pagination :deep(.ant-pagination-item a) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.album-pagination :deep(.ant-pagination-item:hover),
+.album-pagination :deep(.ant-pagination-prev:hover),
+.album-pagination :deep(.ant-pagination-next:hover) {
+  border-color: #00dbde;
+}
+
+.album-pagination :deep(.ant-pagination-item-active) {
+  background: linear-gradient(90deg, #00dbde 0%, #fc00ff 100%);
+  border-color: transparent;
+}
+
+.album-pagination :deep(.ant-pagination-item-active a) {
+  color: white;
+}
+
+.album-pagination :deep(.ant-pagination-item-link) {
+  color: rgba(255, 255, 255, 0.8);
+  background: transparent;
+  border: none;
+}
+
+.album-pagination :deep(.ant-pagination-disabled .ant-pagination-item-link) {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.album-pagination :deep(.ant-pagination-options) {
+  display: none;
 }
 </style>

@@ -25,7 +25,10 @@ import {
     Empty,
     Comment,
     Switch,
-    Carousel
+    Carousel,
+    Pagination,
+    List,
+    Slider
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -66,7 +69,13 @@ app.use(Empty)
 app.use(Comment)
 app.use(Switch)
 app.use(Carousel)
+app.use(Pagination)
+app.use(List)
+app.use(Slider)
 app.use(formatDate)
 app.use(truncateWords)
+app.use({
+    install(app) {}
+})
 app.use(router)
 app.mount('#app')

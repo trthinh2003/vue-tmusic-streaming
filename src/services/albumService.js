@@ -4,6 +4,13 @@ export async function getAlbums(page = 1, pageSize = 5) {
     return await axiosInstance.get(`/albums?page=${page}&pageSize=${pageSize}`);
 }
 
+export const getAlbumWithSongs = async (page = 1, pageSize = 6, query = '') => {
+  const response = await axiosInstance.get('/albums/get-albums-with-songs', {
+    params: { page, pageSize, query }
+  });
+  return response;
+};
+
 export const searchAlbums = (page = 1, pageSize = 5, query) => {
     return axiosInstance.get(`/albums?page=${page}&pageSize=${pageSize}&query=${query}`, {
         params: {

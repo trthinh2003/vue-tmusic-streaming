@@ -1,7 +1,12 @@
 import axiosInstance from "@/configs/axios";
 
 export async function getMyPlaylists() {
-    return await axiosInstance.get(`/playlists/me`);
+  return await axiosInstance.get(`/playlists/me`);
+}
+
+export async function getPlaylistsPopular(page = 1, pageSize = 10, query = '') {
+  const response = await axiosInstance.get(`/playlists/popular?page=${page}&pageSize=${pageSize}&query=${query}`);
+  return response;
 }
 
 export async function getSongsInPlaylist(playlistId) {
@@ -26,6 +31,30 @@ export const updatePlaylist = async (playlistId, playlistData) => {
   } catch (error) {
     console.error('Error updating playlist:', error);
     throw error;
+  }
+};
+
+export async function uploadPlaylistImage(formData) {
+  try {
+    const response = await axiosInstance.post('/playlists/upload-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading playlist image:', error);
+    throw error;
+  }
+}
+
+export const updatePrivacyPlaylist = async (playlistId, privacy) => {
+  try {
+    const response = await axiosInstance.patch(`/playlists/${playlistId}/privacy`, { isDisplay: privacy });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating playlist privacy:', error);
+    throw new Error(error.response?.data?.message || 'Failed to update privacy');
   }
 };
 

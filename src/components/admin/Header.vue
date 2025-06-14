@@ -21,10 +21,27 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
-const pageTitle = ref('Dashboard');
 const emit = defineEmits(['toggle-sidebar']);
+const route = useRoute();
+
+const pageTitle = ref('');
+
+function updateTitle(routeName) {
+  if (!routeName) return;
+  const parts = routeName.split('-');
+  if (parts.length > 1) {
+    pageTitle.value = (parts[1].charAt(0).toUpperCase() + parts[1].slice(1)).slice(0, -1);
+  } else {
+    pageTitle.value = routeName.charAt(0).toUpperCase() + routeName.slice(1).slice(0, -1);
+  }
+}
+
+watch(() => route.name, (newName) => {
+  updateTitle(newName);
+}, { immediate: true });
 </script>
 
 <style src="@/assets/admin/css/header.css"></style>

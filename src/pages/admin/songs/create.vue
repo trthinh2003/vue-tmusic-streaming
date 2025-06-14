@@ -21,9 +21,15 @@
 
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Nghệ sĩ" name="artist">
-                            <a-input v-model:value="songData.Artist" 
-                                    placeholder="Nhập tên nghệ sĩ"
-                                    class="custom-input" />
+                            <a-auto-complete
+                                v-model:value="songData.Artist"
+                                :options="artistOptions"
+                                :loading="artistLoading"
+                                placeholder="Nhập tên nghệ sĩ"
+                                class="custom-input"
+                                @search="handleArtistSearch"
+                                @select="handleArtistSelect"
+                            />
                             <span class="text-danger" v-if="errorsServer.Artist?.[0]">{{ errorsServer.Artist?.[0] }}</span>
                         </a-form-item>
                     </a-col>
@@ -298,15 +304,21 @@ import {
 import { message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
-import { getAlbums } from '@/services/albumService';
+import { getAlbumsForCreateSong } from '@/services/albumService';
 import { getGenres } from '@/services/genreService';
 import { createSong } from '@/services/songService';
+import { searchArtists } from '@/services/artistService';
 
 const router = useRouter();
 const loading = ref(false);
+
 const lyricsActiveTab = ref('editor');
 const lyricsUploadSuccess = ref(false);
 const lyricsPreview = ref('');
+
+const artistOptions = ref([]);
+const artistLoading = ref(false);
+const artistSearchTimeout = ref(null);
 
 // Form data
 const songData = ref({
@@ -340,6 +352,41 @@ const lyricsFileList = ref([]);
 const lyricsFile = ref(null);
 
 const errorsServer = ref({});
+
+// Xử lý nhập liệu artist
+const handleArtistSearch = (searchValue) => {
+    if (artistSearchTimeout.value) {
+        clearTimeout(artistSearchTimeout.value);
+    }
+    
+    if (!searchValue || searchValue.length < 2) {
+        artistOptions.value = [];
+        return;
+    }
+    
+    artistSearchTimeout.value = setTimeout(async () => {
+        try {
+            artistLoading.value = true;
+            const response = await searchArtists(1, 10, searchValue);
+            
+            artistOptions.value = response.data.data.map(artist => ({
+                value: artist.name,
+                label: artist.name,
+                id: artist.id
+            }));
+        } catch (error) {
+            console.error('Error searching artists:', error);
+            artistOptions.value = [];
+        } finally {
+            artistLoading.value = false;
+        }
+    }, 300); // Debounce 300ms
+};
+
+const handleArtistSelect = (value, option) => {
+    songData.value.Artist = value;
+    // songData.value.ArtistId = option.id;
+};
 
 // Format lyrics text
 const formatLyrics = (type) => {
@@ -521,9 +568,34 @@ const exportLyricsFile = (format = 'txt') => {
     }
 };
 
+// Helper để tạo file .lrc từ text
+const createLrcFileFromText = (lyricsText, songTitle = 'Untitled') => {
+    if (!lyricsText || typeof lyricsText !== 'string') {
+        throw new Error('Invalid lyrics text');
+    }
+    try {
+        const safeTitle = songTitle 
+            ? songTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+            : 'untitled';
+        const fileName = `${safeTitle}_lyrics.lrc`;
+        const lrcBlob = new Blob([lyricsText], { 
+            type: 'text/plain' 
+        });
+        Object.defineProperty(lrcBlob, 'name', {
+            value: fileName,
+            writable: false
+        });
+        
+        return lrcBlob;
+    } catch (error) {
+        console.error('Error creating LRC blob:', error);
+        throw error;
+    }
+};
+
 onMounted(async () => {
     try {
-        const albumRes = await getAlbums(1, 100);
+        const albumRes = await getAlbumsForCreateSong(1, 100);
         albums.value = albumRes.data.data.map(album => ({
             value: album.id,
             label: album.title
@@ -618,10 +690,11 @@ const handleSongUpload = (info) => {
 
 console.log(songData.value);
 
+
 const handleSubmit = async () => {
     try {
         loading.value = true;
-		const formData = new FormData();
+        const formData = new FormData();
         formData.append('Title', songData.value.Title);
         formData.append('Artist', songData.value.Artist);
         formData.append('Genres', JSON.stringify(songData.value.Genres));
@@ -640,11 +713,22 @@ const handleSubmit = async () => {
         if (songData.value.SongFile) {
             formData.append('SongFile', songData.value.SongFile);
         }
+        // Xử lý lyrics - tự động tạo file .lrc nếu cần
         if (lyricsFile.value) {
+            // Nếu đã có file lyric được upload
             formData.append('LyricsFile', lyricsFile.value);
         } else if (songData.value.LyricsText) {
-            formData.append('LyricsText', songData.value.LyricsText);
+            // Nếu có text lyric nhưng chưa có file, tự động tạo file .lrc
+            try {
+                const lrcBlob = createLrcFileFromText(songData.value.LyricsText, songData.value.Title);
+                formData.append('LyricsFile', lrcBlob);
+            } catch (error) {
+                console.error('Error creating LRC file:', error);
+                // Fallback: gửi text thuần túy nếu không tạo được file
+                formData.append('LyricsText', songData.value.LyricsText);
+            }
         }
+        
         console.log([...formData.entries()]);
         try {
             const response = await createSong(formData);
@@ -700,6 +784,9 @@ onUnmounted(() => {
     }
     if (previewCover.value) {
         URL.revokeObjectURL(previewCover.value);
+    }
+    if (artistSearchTimeout.value) {
+        clearTimeout(artistSearchTimeout.value);
     }
 });
 </script>

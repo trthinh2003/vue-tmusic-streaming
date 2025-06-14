@@ -255,7 +255,7 @@
   </a-button>
   <a-drawer 
     class="lyric-drawer-right" 
-    :width="500" 
+    :width="drawerLyricWidth"
     title="Lời bài hát & Bình luận"
     placement="right" 
     :header-style="{ background: 'rgba(26, 26, 46, 0.9)' }"
@@ -266,7 +266,7 @@
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        width: '70%',
+        width: '100%',
         marginLeft: 'auto',
       }"
   >
@@ -442,7 +442,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, onBeforeUnmount  } from 'vue'
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
 import PlayListModal from '@/components/client/PlayListModal.vue'
@@ -454,7 +454,7 @@ import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getSongs, getSongByPlaylist } from '@/services/songService'
+import { getSongs, getRandomSongs, getSongByPlaylist } from '@/services/songService'
 import { getMyPlaylists } from '@/services/playlistService'
 import { useProfileStore } from '@/stores/useProfile.js'
 import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
@@ -468,7 +468,7 @@ const originalPlaylist = ref([]);
 
 const getSongsFromServer = async () => {
   try {
-    const response = await getSongs(1, 20);
+    const response = await getRandomSongs(1, 21, 20);
     originalPlaylist.value = response.data.data.map(song => ({
       ...song,
       isFavorite: false
@@ -752,11 +752,6 @@ const prevSong = () => {
   isPlaying.value = true
 }
 
-// onMounted(() => {
-//   currentUser.value = JSON.parse(localStorage.getItem('user'))
-// })
-
-// Theo dõi thay đổi shuffle
 watch(isShuffled, (newVal) => {
   if (newVal) {
     shufflePlaylist()
@@ -856,16 +851,7 @@ const handleHelpModalClose = () => {
 // Modal Playlist
 const showModal = ref(false);
 const currentPlaylistId = ref(null);
-const playlists = ref([
-  // {
-  //   id: 1,
-  //   name: 'Playlist 1',
-  // },
-  // {
-  //   id: 2,
-  //   name: 'Playlist 2',
-  // }
-]);
+const playlists = ref([]);
 
 const selectedPlaylist = ref(null);
 const playlistSongs = ref([]);
@@ -950,9 +936,22 @@ const loadAllSongs = async () => {
   }
 };
 
+const drawerLyricWidth = ref('50vw')
+function updateDrawerWidth() {
+  const width = window.innerWidth
+  if (width < 576) drawerLyricWidth.value = '90vw'       // Mobile
+  else if (width < 768) drawerLyricWidth.value = '80vw'   // Tablet
+  else drawerLyricWidth.value = '350px'                   // Desktop
+}
 onMounted(() => {
+  updateDrawerWidth();
+  window.addEventListener('resize', updateDrawerWidth)
   fetchPlaylists();
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateDrawerWidth)
+})
 
 const handleChangePlaylist = (playlistId) => {
   currentPlaylistId.value = playlistId;

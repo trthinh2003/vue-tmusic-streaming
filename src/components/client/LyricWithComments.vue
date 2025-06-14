@@ -106,6 +106,7 @@ const handleSeek = (time) => {
 
 :deep(.ant-tabs-content) {
   overflow-y: hidden;
+  height: 100%;
 }
 
 .custom-tab {

@@ -50,19 +50,6 @@
             </template>
         </template>
     </a-table>
-    <!-- <ArtistModalEdit 
-        :isModalEditVisible="isModalEditVisible" 
-        :newArtist="newArtist" 
-        :previewImage="previewImage"
-        @submit-form="submitForm" 
-        @close-modal="isModalEditVisible = false" 
-        @handle-file-upload="updateAvatar" 
-    />
-    <ArtistModalDetail 
-        :isModalDetailVisible="visible" 
-        :artist="selectedArtist" 
-        @close-modal="visible = false" 
-    /> -->
 </template>
 
 <script setup>

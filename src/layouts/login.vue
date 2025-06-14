@@ -87,11 +87,7 @@ const handleLogin = handleSubmit(async (values) => {
     try {
         loading.value = true;
         const role = await login(values);
-        message.success('Đăng nhập thành công!');
-
-        setTimeout(() => {
-            router.push({ name: role === 'User' ? 'client' : 'admin-dashboard' });
-        }, 500);
+        await nextGo(role === 'User' ? 'client' : 'admin-dashboard');
     } catch (error) {
         console.error("Login error:", error);
         const errorMessage = error.response?.data?.message || "Đã xảy ra lỗi!";
@@ -100,6 +96,13 @@ const handleLogin = handleSubmit(async (values) => {
         loading.value = false;
     }
 });
+
+const nextGo = async (name) => {
+  const hide = message.loading('Đang chuyển trang...', 5000);
+  await router.push({ name });
+  hide();
+  window.location.reload();
+};
 </script>
 
 <style scoped src="@/assets/admin/css/login.css"></style>

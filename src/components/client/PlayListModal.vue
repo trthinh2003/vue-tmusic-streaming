@@ -80,6 +80,28 @@
       <div class="song-list" v-if="selectedPlaylist">
         <div class="header">
           <h3>Bài hát trong playlist: {{ selectedPlaylist.name }}</h3>
+          <a-dropdown 
+            v-model:open="privacyDropdownVisible"
+            :trigger="['click']"
+            placement="bottomRight"
+          >
+            <a-button type="text" style="color: #fff;">
+              {{ selectedPlaylist.isDisplay ? 'Public' : 'Private' }}
+              <i class="fa-solid fa-chevron-down ms-2"></i>
+            </a-button>
+            <template #overlay>
+              <a-menu @click="handlePrivacyChange">
+                <a-menu-item key="public" :disabled="selectedPlaylist.isDisplay">
+                  <i class="fa-solid fa-earth-americas me-2"></i>
+                  Public
+                </a-menu-item>
+                <a-menu-item key="private" :disabled="!selectedPlaylist.isDisplay">
+                  <i class="fa-solid fa-lock me-2"></i>
+                  Private
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
         </div>
         
         <a-table
@@ -111,6 +133,7 @@
       :title="null"
       :footer="null"
       :closable="false"
+      width="600px"
       @ok="handlePlaylistSubmit"
       @cancel="resetPlaylistForm"
     >
@@ -142,18 +165,107 @@
 
       <!-- Nội dung form -->
       <a-form :model="playlistForm" layout="vertical" style="margin-top: 16px;">
+        <!-- Upload ảnh -->
+        <a-form-item>
+          <template #label>
+            <span style="color: #fff;">Ảnh playlist</span>
+          </template>
+          <div class="image-upload-section">
+            <div class="image-preview" v-if="playlistForm.imagePreview">
+              <img :src="playlistForm.imagePreview" alt="Preview" />
+              <div class="image-overlay">
+                <a-button type="text" @click="removeImage" class="remove-btn">
+                  <i class="fa-solid fa-trash"></i>
+                </a-button>
+              </div>
+            </div>
+            <div class="upload-area" v-else @click="triggerFileUpload">
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/*"
+                @change="handleImageUpload"
+                style="display: none"
+              />
+              <div class="upload-content">
+                <i class="fa-solid fa-cloud-upload-alt"></i>
+                <p>Nhấn để tải ảnh lên</p>
+                <small>Hỗ trợ: JPG, PNG, GIF (tối đa 5MB)</small>
+              </div>
+            </div>
+          </div>
+        </a-form-item>
+
+        <!-- Tên playlist -->
         <a-form-item required>
           <template #label>
             <span style="color: #fff;">Tên playlist</span>
           </template>
           <a-input v-model:value="playlistForm.name" placeholder="Nhập tên playlist" />
         </a-form-item>
+
+        <!-- Mô tả playlist -->
+        <a-form-item>
+          <template #label>
+            <span style="color: #fff;">Mô tả</span>
+          </template>
+          <a-textarea 
+            v-model:value="playlistForm.description" 
+            placeholder="Nhập mô tả cho playlist (tùy chọn)"
+            :rows="3"
+            :maxlength="500"
+            show-count
+          />
+        </a-form-item>
       </a-form>
 
       <!-- Footer tùy chỉnh -->
       <div style="text-align: right; margin-top: 16px;">
         <a-button @click="resetPlaylistForm">Hủy</a-button>
-        <a-button type="primary" @click="handlePlaylistSubmit" style="margin-left: 8px;">Lưu</a-button>
+        <a-button 
+          type="primary" 
+          @click="handlePlaylistSubmit" 
+          :loading="submitting"
+          style="margin-left: 8px;"
+        >
+          {{ isEditing ? 'Cập nhật' : 'Tạo mới' }}
+        </a-button>
+      </div>
+    </a-modal>
+
+    <!-- Modal xác nhận có public/private playlist ko-->
+    <a-modal
+      v-model:open="privacyModalVisible"
+      :title="null"
+      centered
+      :confirmLoading="changingPrivacy"
+      :okText="newPrivacyStatus ? 'Công khai' : 'Riêng tư'"
+      :okButtonProps="{ 
+        danger: !newPrivacyStatus,
+        type: newPrivacyStatus ? 'primary' : 'default' 
+      }"
+      cancelText="Hủy"
+      @ok="confirmPrivacyChange"
+      @cancel="privacyModalVisible = false"
+    >
+      <div style="text-align: center; padding: 20px;">
+        <i 
+          class="fa-solid" 
+          :class="newPrivacyStatus ? 'fa-earth-americas' : 'fa-lock'" 
+          style="font-size: 36px; color: #1890ff; margin-bottom: 16px;"
+        ></i>
+        <h3 style="color: white; margin-bottom: 8px;">
+          Bạn chắc chắn muốn đặt playlist này ở chế độ <br>
+          <span :style="{ color: newPrivacyStatus ? '#52c41a' : '#ff4d4f' }">
+            {{ newPrivacyStatus ? 'CÔNG KHAI' : 'RIÊNG TƯ' }}
+          </span>?
+        </h3>
+        <p style="color: rgba(255, 255, 255, 0.65);">
+          {{ newPrivacyStatus 
+            ? 'Mọi người sẽ có thể xem playlist của bạn' 
+            : 'Chỉ bạn mới có thể xem playlist này' 
+          }}
+        </p>
       </div>
     </a-modal>
   </a-modal>
@@ -171,10 +283,14 @@ import { message, Modal } from 'ant-design-vue';
 import { 
   createPlaylist, 
   updatePlaylist, 
+  uploadPlaylistImage,
+  updatePrivacyPlaylist,
   deletePlaylist,
   getSongsInPlaylist,
   removeSongFromPlaylist
 } from '@/services/playlistService';
+import { usePlaylistSignalStore } from '@/stores/playlistSignalStore';
+const playlistSignalStore = usePlaylistSignalStore();
 
 const props = defineProps({
   open: Boolean,
@@ -201,29 +317,59 @@ const isEditing = ref(false);
 const playlistForm = ref({
   id: null,
   name: '',
+  description: '',
+  image: null,
+  imagePreview: null
 });
 
-const songColumns = [
-  {
-    title: 'Tên bài hát',
-    dataIndex: 'title',
-    key: 'title'
-  },
-  {
-    title: 'Nghệ sĩ',
-    dataIndex: 'artist',
-    key: 'artist'
-  },
-  {
-    title: 'Thời lượng',
-    dataIndex: 'duration',
-    key: 'duration'
-  },
-  {
-    title: 'Hành động',
-    key: 'actions',
-    width: '80px'
+const submitting = ref(false);
+const fileInput = ref(null);
+
+// Xử lý upload ảnh
+const triggerFileUpload = () => {
+  fileInput.value?.click();
+};
+
+const handleImageUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate file size (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    message.error('Kích thước ảnh không được vượt quá 5MB');
+    return;
   }
+
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    message.error('Chỉ hỗ trợ định dạng ảnh JPG, PNG, GIF');
+    return;
+  }
+
+  playlistForm.value.image = file;
+  
+  // Tạo preview xem trước ảnh
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    playlistForm.value.imagePreview = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeImage = () => {
+  playlistForm.value.image = null;
+  playlistForm.value.imagePreview = null;
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+};
+
+const songColumns = [
+  { title: 'Tên bài hát', dataIndex: 'title', key: 'title' },
+  { title: 'Nghệ sĩ', dataIndex: 'artist', key: 'artist' },
+  { title: 'Thời lượng', dataIndex: 'duration', key: 'duration' },
+  { title: 'Hành động', key: 'actions', width: '80px' }
 ];
 
 // Chọn playlist
@@ -241,6 +387,37 @@ const selectPlaylist = async (playlist) => {
     message.error('Lỗi khi tải bài hát trong playlist');
   } finally {
     songsLoading.value = false;
+  }
+};
+
+// Chế độ private/public của playlist
+const privacyDropdownVisible = ref(false);
+const privacyModalVisible = ref(false);
+const newPrivacyStatus = ref(null);
+const changingPrivacy = ref(false);
+const handlePrivacyChange = ({ key }) => {
+  newPrivacyStatus.value = key === 'public';
+  privacyModalVisible.value = true;
+};
+const confirmPrivacyChange = async () => {
+  changingPrivacy.value = true;
+  try {
+    if (playlistSongs.value.length > 0) {
+      await updatePrivacyPlaylist(selectedPlaylist.value.id, newPrivacyStatus.value);
+      
+      selectedPlaylist.value.isDisplay = newPrivacyStatus.value;
+      playlistSignalStore.triggerRefresh();
+      message.success(`Đã chuyển playlist sang chế độ ${newPrivacyStatus.value ? 'công khai' : 'riêng tư'}`);
+      emit('refresh');
+    } else {
+      message.error('Playlist không có bài hát nào. Không thể public.');
+    }
+  } catch (error) {
+    message.error(error.message || 'Thay đổi chế độ thất bại');
+  } finally {
+    changingPrivacy.value = false;
+    privacyModalVisible.value = false;
+    privacyDropdownVisible.value = false;
   }
 };
 
@@ -267,7 +444,13 @@ const showCreateModal = () => {
 // Hiển thị modal chỉnh sửa playlist
 const editPlaylist = (playlist) => {
   isEditing.value = true;
-  playlistForm.value = { ...playlist };
+  playlistForm.value = { 
+    id: playlist.id,
+    name: playlist.name,
+    description: playlist.description || '',
+    image: null,
+    imagePreview: playlist.image || null
+  };
   playlistModalVisible.value = true;
 };
 
@@ -278,32 +461,49 @@ const handleCancel = () => {
 
 // Xử lý submit tạo/chỉnh sửa playlist
 const handlePlaylistSubmit = async () => {
-  if (!playlistForm.value.name) {
+  if (!playlistForm.value.name.trim()) {
     message.error('Vui lòng nhập tên playlist');
     return;
   }
 
+  submitting.value = true;
+  
   try {
+    let imageUrl = playlistForm.value.imagePreview;  
+    // Upload ảnh nếu có ảnh mới
+    if (playlistForm.value.image) {
+      const formData = new FormData();
+      formData.append('file', playlistForm.value.image);   
+      const uploadResponse = await uploadPlaylistImage(formData);
+      imageUrl = uploadResponse.url;
+    }
+
+    const playlistData = {
+      name: playlistForm.value.name,
+      description: playlistForm.value.description,
+      image: imageUrl
+    };
+
     if (isEditing.value) {
-      // console.log(playlistForm.value.name);
-      const res = await updatePlaylist(playlistForm.value.id, { 
-        name: playlistForm.value.name 
-      });
-      console.log(res);
+      await updatePlaylist(playlistForm.value.id, playlistData);
+      playlistSignalStore.triggerRefresh();
       message.success('Cập nhật playlist thành công');
     } else {
-      const res = await createPlaylist({ 
-        name: playlistForm.value.name 
-      });
+      await createPlaylist(playlistData);
+      playlistSignalStore.triggerRefresh();
       message.success('Tạo playlist thành công');
     }
+    
     playlistModalVisible.value = false;
+    resetPlaylistForm();
     emit('refresh');
   } catch (error) {
-    message.error('Đã có lỗi xảy ra');
+    message.error(error.message || 'Đã có lỗi xảy ra');
     console.error(error);
+  } finally {
+    submitting.value = false;
   }
-}
+};
 
 // Xác nhận xóa playlist
 const confirmDelete = (playlist) => {
@@ -316,6 +516,7 @@ const confirmDelete = (playlist) => {
     onOk: async () => {
       try {
         await deletePlaylist(playlist.id);
+        playlistStore.deletePlaylist(id)
         message.success('Đã xóa playlist');
         emit('refresh');
         if (props.currentPlaylist?.id === playlist.id) {
@@ -352,7 +553,17 @@ const removeFromPlaylist = async (song) => {
 
 // Reset form playlist
 const resetPlaylistForm = () => {
-  playlistForm.value = { id: null, name: '' };
+  playlistForm.value = { 
+    id: null, 
+    name: '', 
+    description: '',
+    image: null,
+    imagePreview: null 
+  };
+  playlistModalVisible.value = false;
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
 };
 
 // Theo dõi thay đổi currentPlaylist từ props
@@ -441,6 +652,41 @@ watch(() => props.open, (newVal) => {
   flex-direction: column;
 }
 
+:deep(.ant-form-item-label > label) {
+  color: white !important;
+  font-weight: 500;
+}
+
+:deep(.ant-input) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+:deep(.ant-input:focus) {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+:deep(.ant-input::placeholder) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+:deep(.ant-input.ant-input-textarea) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+:deep(.ant-input-textarea .ant-input) {
+  background: transparent;
+  color: white;
+}
+
+:deep(.ant-input-show-count-suffix) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 /* Header styling */
 .header {
   display: flex;
@@ -449,13 +695,55 @@ watch(() => props.open, (newVal) => {
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 10px;
 }
 
 .header h3 {
+  flex: 1;
   color: white;
-  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin: 0;
-  font-weight: 500;
+}
+
+:deep(.ant-dropdown-menu) {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+:deep(.ant-dropdown-menu-item) {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s;
+}
+
+:deep(.ant-dropdown-menu-item:hover) {
+  background: rgba(66, 185, 131, 0.2) !important;
+  color: #42b983;
+}
+
+:deep(.ant-dropdown-menu-item-disabled) {
+  color: #000 !important;
+  background: #ccc !important;
+  cursor: not-allowed;
+}
+
+:deep(.ant-dropdown-menu-item-disabled:hover) {
+  opacity: 0.7;
+}
+
+:deep(.ant-modal-confirm .ant-modal-body) {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.ant-modal-confirm-title) {
+  color: white;
+}
+
+:deep(.ant-modal-confirm-content) {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* List styling */
@@ -551,10 +839,12 @@ watch(() => props.open, (newVal) => {
 .song-table :deep(.ant-table-tbody > tr > td) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.3s;
+  background: transparent !important;
 }
 
 .song-table :deep(.ant-table-tbody > tr:hover > td) {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: transparent !important;
+  color: inherit !important; 
 }
 
 .song-table :deep(.ant-table-row) {
@@ -644,6 +934,91 @@ watch(() => props.open, (newVal) => {
 .playlist-modal :deep(.ant-empty) {
   color: rgba(255, 255, 255, 0.5);
   margin: 40px 0;
+}
+
+/* Image upload styling */
+.image-upload-section {
+  margin-bottom: 16px;
+}
+
+.image-preview {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-preview:hover .image-overlay {
+  opacity: 1;
+}
+
+.remove-btn {
+  color: white !important;
+  font-size: 18px;
+}
+
+.remove-btn:hover {
+  color: #ff4d4f !important;
+  transform: scale(1.1);
+}
+
+.upload-area {
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.upload-area:hover {
+  border-color: #1890ff;
+  background: rgba(24, 144, 255, 0.05);
+}
+
+.upload-content {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.upload-content i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  color: #1890ff;
+}
+
+.upload-content p {
+  margin: 8px 0 4px 0;
+  font-size: 16px;
+  color: white;
+}
+
+.upload-content small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
 }
 
 /* Responsive adjustments */

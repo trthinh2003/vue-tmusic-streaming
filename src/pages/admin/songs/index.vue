@@ -21,67 +21,90 @@
 				</router-link>
             </div>
         </div>
-		<a-table :columns="columns" :data-source="songs" :pagination=false :loading=false :bordered="true"
-			:scroll="{ x: 'max-content', y: 500 }">
-			<template #bodyCell="{ column, record }">
-				<template v-if="column.key === 'cover'">
-					<img :src="record.cover" alt="" style="width: 50px; height: 50px; border-radius: 5px; object-fit: cover;">
-				</template>
-				<template v-if="column.key === 'releaseDate'">
-					{{ $formatDate(record.releaseDate) == "01/01/1901" ? 'Không xác định' : $formatDate(record.releaseDate) }}
-				</template>
-				<template v-if="column.key === 'action'">
-					<div class="action-buttons d-flex justify-content-center align-items-center gap-2 flex-wrap">
-						<a-tooltip title="Chỉnh sửa">
-							<router-link :to="{ name: 'admin-songs-edit', params: { slug: record.slug } }">
-								<a-button shape="circle" type="default" class="action-btn edit-btn">
-									<i class="fa-solid fa-pen-to-square"></i>
-								</a-button>
-							</router-link>
-						</a-tooltip>
-
-						<a-tooltip title="Xóa bài hát">
-							<a-popconfirm title="Bạn có chắc muốn xóa bài hát này?" ok-text="Xác nhận" cancel-text="Hủy"
-								@confirm="confirmDelete(record.id)" @cancel="cancelDelete(record.id)">
-								<a-button shape="circle" type="primary" danger class="action-btn delete-btn">
-									<i class="fa-solid fa-trash-can"></i>
-								</a-button>
-							</a-popconfirm>
-						</a-tooltip>
-					</div>
-				</template>
-			</template>
-		</a-table>
+		<SongTable
+			:songs="songs"
+			:columns="columns"
+			:loading="loading"
+			:pagination="pagination"
+            @update:pagination="pagination = $event"
+			@fetch-data="fetchSongs"
+		/>
 	</a-card>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { getSongs } from '@/services/songService';
+import { ref, onMounted } from 'vue';
+import { getSongs, searchSongs } from '@/services/songService';
+import SongTable from '@/components/admin/songs/SongTable.vue';
+import { message } from 'ant-design-vue';
 
+const isSearching = ref(false);
+const searchQuery = ref("");
 const songs = ref([]);
+const pagination = ref({
+    current: 1,
+    pageSize: 5,
+    total: 0,
+    showSizeChanger: true,
+    showTotal: (total) => `Tổng cộng ${total} bài hát`
+});
+const loading = ref(false);
 const columns = ref([
-	{ title: 'STT', dataIndex: 'id', key: 'key', width: 60, fixed: 'left' },
+	{ title: 'STT', key: 'index', width: 60, fixed: 'left' },
 	{ title: 'Bài hát', dataIndex: 'title', key: 'title', width: 400 },
 	{ title: 'Ảnh', dataIndex: 'cover', key: 'cover', align: 'center', width: 60 },
 	{ title: 'Nghệ sĩ', dataIndex: 'artist', key: 'artist', align: 'center', width: 150 },
 	{ title: 'Thể loại', dataIndex: 'genre', key: 'genre', width: 150 },
-	{ title: 'Ngày phát hành', dataIndex: 'releaseDate', key: 'releaseDate', align: 'center', width: 120 },
+	{ title: 'Năm phát hành', dataIndex: 'releaseDate', key: 'releaseDate', align: 'center', width: 120 },
 	{ title: 'Độ dài', dataIndex: 'duration', key: 'duration', align: 'center', width: 80 },
 	{ title: 'Thao tác', key: 'action', fixed: 'right', align: 'center', className: 'ant-table-cell-action' },
 ]);
-
-const displaySongs = async () => {
-	try {
-		const response = await getSongs();
-		songs.value = response.data.data;
-		console.log(response.data.data);
-	} catch (error) {
-		console.log(error);
-	}
-}
-displaySongs();
-
+const fetchSongs = (page = 1, pageSize = 5) => {
+    if (isSearching.value) return;
+    loading.value = true;
+    getSongs(page, pageSize)
+    .then((res) => {
+		songs.value = res.data.data;
+        pagination.value = {
+            ...pagination.value,
+            total: res.data.pagination.totalItems,
+            current: res.data.pagination.currentPage,
+            pageSize: res.data.pagination.perPage,
+            showTotal: (total) => `Tổng cộng ${total} bài hát`,
+        };
+    })
+    .catch(() => message.error("Không thể lấy dữ liệu"))
+    .finally(() => (loading.value = false));
+};
+const handleSearch = () => {
+    if (!searchQuery.value.trim()) {
+        isSearching.value = false;
+		fetchSongs();
+        return;
+    }         
+    isSearching.value = true;
+    loading.value = true;          
+    searchSongs(pagination.value.current, pagination.value.pageSize, searchQuery.value)
+    .then((res) => {
+		songs.value = res.data.data;
+		pagination.value = {
+		...pagination.value,
+		total: res.data.pagination.totalItems,
+		current: res.data.pagination.currentPage,
+		pageSize: res.data.pagination.perPage,
+		showTotal: (total) => `Tổng cộng ${total} bài hát`,
+		};
+	})
+	.then(() => (isSearching.value = true))
+    .catch(() => {
+		message.error("Tìm kiếm thất bại");
+		console.log(error)
+	})
+    .finally(() => (loading.value = false));
+};
+onMounted(() => {
+	fetchSongs();
+})
 </script>
 
 <style scoped src="@/assets/admin/css/table-custom.css"></style>

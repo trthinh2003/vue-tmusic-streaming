@@ -19,6 +19,7 @@
     "dayjs": "^1.11.13",
     "font-awesome": "^4.7.0",
     "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
     "pinia": "^3.0.1",
     "sweetalert2": "^11.17.2",
     "t-writer.js": "^1.0.4",

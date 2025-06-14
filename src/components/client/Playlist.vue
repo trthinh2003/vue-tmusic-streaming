@@ -1,5 +1,5 @@
 <template>
-  <div class="playlist">
+  <div class="playlist mt-4">
     <div class="playlist-header">
       <h2>Playlist</h2>
       <div class="actions">

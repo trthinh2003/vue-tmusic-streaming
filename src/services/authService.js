@@ -5,9 +5,20 @@ let refreshTokenInterval = null;
 
 export async function getProfile() {
   const profileStore = useProfileStore();
-  const res = await axiosInstance.get("/auth/me");
-  console.log("Roles từ BE:", res.data.role);
-  profileStore.setProfile(res.data);
+  try {
+    const res = await axiosInstance.get("/auth/me");
+    console.log("Roles từ BE:", res.data.role);
+    profileStore.setProfile(res.data);
+    
+    // Khởi động timer sau khi get profile thành công
+    startRefreshTokenTimer();
+    
+    return res.data;
+  } catch (error) {
+    console.error("Get profile error:", error);
+    profileStore.clearProfile(); // Xóa profile cũ
+    throw error;
+  }
 }
 
 export async function login(values) {
@@ -15,8 +26,6 @@ export async function login(values) {
 
   const res = await axiosInstance.post('/auth/login', values);
   await getProfile();
-
-  startRefreshTokenTimer();
 
   return profileStore.profile.role;
 }
@@ -27,19 +36,26 @@ export async function refreshToken() {
     console.log('Đã refresh token!');
   } catch (error) {
     console.error('Lỗi refresh token:', error);
-    clearInterval(refreshTokenInterval);
+    stopRefreshTokenTimer();
     throw error;
   }
 }
 
 export function startRefreshTokenTimer() {
   console.log('Start refresh token timer...');
-  if (refreshTokenInterval) clearInterval(refreshTokenInterval);
+  stopRefreshTokenTimer(); // Clear timer cũ trước
 
   refreshTokenInterval = setInterval(() => {
     refreshToken();
     console.log('Refresh token every 25 minutes!');
-  }, 25 * 60 * 1000); // 25 phút gọi lên lấy token duy trì login
+  }, 25 * 60 * 1000);
+}
+
+export function stopRefreshTokenTimer() {
+  if (refreshTokenInterval) {
+    clearInterval(refreshTokenInterval);
+    refreshTokenInterval = null;
+  }
 }
 
 export async function register(data) {

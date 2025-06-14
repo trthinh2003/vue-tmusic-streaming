@@ -28,7 +28,8 @@ import {
     Carousel,
     Pagination,
     List,
-    Slider
+    Slider,
+    AutoComplete
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -72,6 +73,7 @@ app.use(Carousel)
 app.use(Pagination)
 app.use(List)
 app.use(Slider)
+app.use(AutoComplete)
 app.use(formatDate)
 app.use(truncateWords)
 app.use({

@@ -1,7 +1,7 @@
 <template>
 	<div class="player">
 		<div class="disc-container">
-			<div class="disc" :class="{ 'is-playing': isPlaying }">
+			<div class="disc" :class="{ 'is-playing': props.isPlaying }">
 				<img :src="currentSong.cover" alt="Album cover" class="album-cover" />
 			</div>
 			<div class="song-info">
@@ -11,9 +11,15 @@
 			<button class="download-btn position-absolute" @click.stop="showDownloadModal" style="top:0; right:0;">
 				<i class="fa-solid fa-download"></i>
 			</button>
-			<!-- Thêm nút tym -->
-			<button class="favorite-btn position-absolute" @click.stop="toggleFavorite" :class="{ 'is-favorite': currentSong.isFavorite }" title="Yêu thích">
-				<i class="fa-solid fa-heart"></i>
+			<button
+				class="favorite-btn position-absolute"
+				@click.stop="handleToggleFavorite"
+				:class="{ 'is-favorite': props.isFavorite }"
+				:disabled="favoriteLoading"
+				title="Yêu thích"
+			>
+				<i class="fa-solid fa-heart" v-if="!favoriteLoading"></i>
+				<i class="fa-solid fa-spinner fa-spin" v-else></i>
 			</button>
 		</div>
 
@@ -70,30 +76,24 @@
 		</audio>
 
 		<!-- Modal tải xuống -->
-		<DownloadModal 
-			:is-visible="isDownloadModalVisible" 
-			:song="currentSong"
-			@close="closeDownloadModal"
-			@download="handleDownload"
-		/>
+		<DownloadModal :is-visible="isDownloadModalVisible" :song="currentSong" @close="closeDownloadModal"
+			@download="handleDownload" />
 	</div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { Icon } from '@iconify/vue';
 import DownloadModal from './DownloadModal.vue';
-
-component: {
-	Icon,
-	DownloadModal
-}
+import { toggleFavorite as toggleFavoriteAPI } from '@/services/favoriteService';
+import { useFavoriteStore } from '@/stores/useFavoriteStore'
 
 const props = defineProps({
 	currentSong: Object,
 	isPlaying: Boolean,
-	playlist: Array
+	playlist: Array,
+	isFavorite: Boolean
 })
 
 const emit = defineEmits([
@@ -103,7 +103,9 @@ const emit = defineEmits([
 	'update-shuffle',
 	'update-playlist',
 	'timeupdate',
-	'update-song'
+	'update-song',
+	'favorite-updated',
+	'update-favorite'
 ])
 
 const audioPlayer = ref(null)
@@ -117,6 +119,22 @@ const isShuffled = ref(false)
 const isLyricsVisible = ref(false)
 const isDownloadModalVisible = ref(false)
 
+const favoriteStore = useFavoriteStore()
+const isCurrentSongFavorite = computed(() => {
+  if (!props.currentSong?.id) return false
+  return favoriteStore.isFavorite(props.currentSong.id)
+})
+const favoriteLoading = computed(() => favoriteStore.loading);
+const handleToggleFavorite = async () => {
+  if (!props.currentSong?.id) return
+
+  try {
+    const newStatus = await favoriteStore.toggle(props.currentSong.id)
+    emit('favorite-updated', props.currentSong.id, newStatus)
+  } catch (error) {
+    console.error('Toggle favorite error:', error)
+  }
+}
 // Format thời gian (phút:giây)
 const formatTime = (time) => {
 	const minutes = Math.floor(time / 60)
@@ -145,6 +163,17 @@ const seekAudio = (e) => {
 	audioPlayer.value.currentTime = (percentage / 100) * duration.value
 }
 
+// Toggle favorite với BE
+const toggleFavorite = async () => {
+	if (!props.currentSong?.id) return
+	favoriteLoading.value = true
+	try {
+		await favoriteStore.toggle(props.currentSong.id)
+	} finally {
+		favoriteLoading.value = false
+	}
+}
+
 // Hiển thị modal tải xuống
 const showDownloadModal = () => {
 	isDownloadModalVisible.value = true
@@ -158,16 +187,8 @@ const closeDownloadModal = () => {
 // Xử lý tải bài hát với chất lượng được chọn
 const handleDownload = (downloadInfo) => {
 	const { song, quality } = downloadInfo
-	
-	// Tạo tên file gồm tên bài hát và nghệ sĩ
 	const fileName = `${song.title} - ${song.artist} (${quality}).mp3`
-	
-	// Giả lập việc tải file với chất lượng khác nhau
 	let downloadUrl = song.audio
-	
-	// Trong thực tế, server sẽ xử lý việc chuyển đổi định dạng và chất lượng
-	// Ở đây chúng ta giả lập bằng cách dùng URL gốc
-	
 	// Tạo một thẻ a ẩn để tải file
 	const downloadLink = document.createElement('a')
 	downloadLink.href = downloadUrl
@@ -175,8 +196,6 @@ const handleDownload = (downloadInfo) => {
 	document.body.appendChild(downloadLink)
 	downloadLink.click()
 	document.body.removeChild(downloadLink)
-	
-	// Hiển thị thông báo thành công (có thể thêm toast notification ở đây)
 	console.log(`Đang tải xuống: ${fileName}`)
 }
 
@@ -195,7 +214,7 @@ const changeVolume = () => {
 	audioPlayer.value.volume = volume.value
 }
 
-// Cập nhật âm lượng khi thay đổi từ nguồn khác
+// Cập nhật âm lượng
 const updateVolume = () => {
 	volume.value = audioPlayer.value.volume
 }
@@ -234,6 +253,30 @@ onUnmounted(() => {
 	}
 })
 
+watch(() => props.isFavorite, (newVal) => {
+  console.log('Favorite status from parent:', newVal)
+}, { immediate: true })
+
+// Watch khi bài hát thay đổi
+watch(() => props.currentSong, (newSong, oldSong) => {
+  if (!audioPlayer.value) return
+  
+  // Reset progress khi chuyển bài
+  currentTime.value = 0
+  progressPercentage.value = 0
+
+  if (props.isPlaying) {
+    setTimeout(() => {
+      audioPlayer.value.play().catch(e => {
+        console.error("Lỗi phát nhạc:", e)
+        emit('toggle-play')
+      })
+    }, 100)
+  }
+  console.log('Current song changed:', newSong?.title)
+  console.log('Is favorite:', isCurrentSongFavorite.value)
+})
+
 watch(() => props.isPlaying, (newVal) => {
 	if (!audioPlayer.value) return
 
@@ -247,64 +290,19 @@ watch(() => props.isPlaying, (newVal) => {
 	}
 })
 
-watch(() => props.currentSong, () => {
-	if (!audioPlayer.value) return
-
-	// Reset progress khi chuyển bài
-	currentTime.value = 0
-	progressPercentage.value = 0
-
-	if (props.isPlaying) {
-		// Đợi DOM cập nhật trước khi phát
-		setTimeout(() => {
-			audioPlayer.value.play().catch(e => {
-				console.error("Lỗi phát nhạc:", e)
-				emit('toggle-play')
-			})
-		}, 100)
-	}
-})
-
-// Hàm cho phép người dùng thả tym
-const toggleFavorite = () => {
-  const updatedSong = {
-    ...props.currentSong,
-    isFavorite: !props.currentSong.isFavorite
-  };
-	message.error('Chưa có tính năng này nhe ní!');
-  emit('update-song', updatedSong);
-	console.log("Song updated:", updatedSong);
-  saveFavorites();
-};
-
-const saveFavorites = () => {
-  if (props.playlist) {
-    const favorites = props.playlist.filter(song => song.isFavorite);
-    localStorage.setItem('favoriteSongs', JSON.stringify(favorites));
-  }
-};
-
-// Load favorites when component mounts
-onMounted(() => {
-  const savedFavorites = localStorage.getItem('favoriteSongs');
-  if (savedFavorites) {
-    const favorites = JSON.parse(savedFavorites);
-    // You might want to update your playlist here based on saved favorites
-  }
-});
-
 const seekTo = (time) => {
-  if (audioPlayer.value) {
-    audioPlayer.value.currentTime = time;
-    currentTime.value = time;
-    progressPercentage.value = (time / duration.value) * 100;
-  }
+	if (audioPlayer.value) {
+		audioPlayer.value.currentTime = time;
+		currentTime.value = time;
+		progressPercentage.value = (time / duration.value) * 100;
+	}
 };
 
 defineExpose({
-  seekTo
+	seekTo
 });
 </script>
+
 
 <style scoped>
 .player {
@@ -548,50 +546,46 @@ defineExpose({
 	transform: scale(1.1);
 }
 
-/* .lyrics-btn {
-	position: absolute;
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	border-radius: 50%;
-	color: #f8f9fa;
+.favorite-btn {
+	top: 0;
+	left: 0;
+	background: transparent;
+	border: none;
+	color: rgba(255, 255, 255, 0.6);
 	font-size: 1.2rem;
 	cursor: pointer;
 	border-radius: 50%;
-	top: 0;
-	left: 0;
 	padding: 8px;
 	transition: all 0.2s;
 }
 
-.lyrics-btn:hover {
-	background: rgba(255, 255, 255, 0.1);
-} */
-
-.favorite-btn {
-	top: 0;
-	left: 0;
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.2rem;
-  cursor: pointer;
-  border-radius: 50%;
-  padding: 8px;
-  transition: all 0.2s;
-}
-
 .favorite-btn:hover {
-  color: #ff6b6b;
-  transform: scale(1.1);
+	color: #ff6b6b;
+	transform: scale(1.1);
 }
 
 .favorite-btn.is-favorite {
-  color: #ff6b6b;
-  text-shadow: 0 0 10px rgba(255, 107, 107, 0.7);
+	color: #ff6b6b;
+	text-shadow: 0 0 10px rgba(255, 107, 107, 0.7);
 }
 
 .favorite-btn.is-favorite:hover {
-  color: #ff8787;
+	color: #ff8787;
+}
+
+.favorite-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.favorite-btn:disabled:hover {
+	transform: none;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.favorite-btn.is-favorite:disabled:hover {
+	color: #ff6b6b;
 }
 
 @media (max-width: 576px) {

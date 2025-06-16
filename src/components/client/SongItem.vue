@@ -8,7 +8,7 @@
     <img :src="song.cover" alt="Cover" class="song-cover">
     <div class="song-details">
       <h3>{{ song.title }}</h3>
-      <p class="text-white">{{ song.artist }}</p>
+      <p class="text-white">{{ $truncateWords(song.artist, 2) }}</p>
     </div>
     <span class="duration text-white">{{ song.duration }}</span>
     
@@ -153,6 +153,7 @@ const vClickOutside = {
 .song-details p {
   font-size: 14px;
   color: #aaa;
+  text-overflow: ellipsis;
 }
 
 .duration {

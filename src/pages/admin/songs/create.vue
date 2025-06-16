@@ -71,15 +71,16 @@
             <!-- Section 2: Classification -->
             <a-card title="Phân loại" class="form-section">
                 <a-row :gutter="24">
-                    <a-col :xs="24" :md="12">
-                        <a-form-item label="Album" name="album">
+                   <a-col :xs="24" :md="12">
+                        <a-form-item label="Album (Tùy chọn)" name="album">
                             <a-select
                                 v-model:value="songData.Albums"
                                 show-search
-                                placeholder="Chọn album"
+                                placeholder="Chọn album (có thể bỏ trống)"
                                 :options="albums"
                                 :filter-option="filterOption"
                                 class="custom-select"
+                                allowClear
                             />
                             <span class="text-danger" v-if="errorsServer.Album?.[0]">{{ errorsServer.Album?.[0] }}</span>                            
                         </a-form-item>
@@ -596,10 +597,14 @@ const createLrcFileFromText = (lyricsText, songTitle = 'Untitled') => {
 onMounted(async () => {
     try {
         const albumRes = await getAlbumsForCreateSong(1, 100);
-        albums.value = albumRes.data.data.map(album => ({
-            value: album.id,
-            label: album.title
-        }));    
+        console.log(albumRes);
+        albums.value = [
+            { value: null, label: "-- Không chọn album --" },
+            ...albumRes.data.data.map(album => ({
+                value: album.id,
+                label: album.title
+            }))
+        ];     
 
         const genreRes = await getGenres();
         genres.value = genreRes.data.map(genre => ({
@@ -700,7 +705,9 @@ const handleSubmit = async () => {
         formData.append('Genres', JSON.stringify(songData.value.Genres));
         formData.append('Duration', songData.value.Duration);
         formData.append('ReleaseDate', dayjs(songData.value.ReleaseDate).format('YYYY-MM-DD') == 'Invalid Date' ? '' : dayjs(songData.value.ReleaseDate).format('YYYY-MM-DD'));
-        formData.append('Album', songData.value.Albums);
+        if (songData.value.Albums && songData.value.Albums !== null && songData.value.Albums !== '') {
+            formData.append('Album', songData.value.Albums.toString());
+        }        
         formData.append('cour', songData.value.Cour);
         formData.append('Tags', JSON.stringify(songData.value.Tags));
         
@@ -721,7 +728,7 @@ const handleSubmit = async () => {
             // Nếu có text lyric nhưng chưa có file, tự động tạo file .lrc
             try {
                 const lrcBlob = createLrcFileFromText(songData.value.LyricsText, songData.value.Title);
-                formData.append('LyricsFile', lrcBlob);
+                formData.append('LyricsFile', lrcBlob, `${safeTitle}_lyrics.lrc`);
             } catch (error) {
                 console.error('Error creating LRC file:', error);
                 // Fallback: gửi text thuần túy nếu không tạo được file

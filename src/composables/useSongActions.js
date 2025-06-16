@@ -58,10 +58,7 @@ export function useSongActions() {
     try {
       await addSongsToPlaylist(playlistId, selectedSongForPlaylist.value.id);
       message.success(`Đã thêm "${selectedSongForPlaylist.value.title}" vào playlist`);
-      
-      // Refresh danh sách playlist
       await loadPlaylists();
-      
       showPlaylistModal.value = false;
     } catch (error) {
       console.error("Lỗi khi thêm bài hát vào playlist:", error);
@@ -69,7 +66,6 @@ export function useSongActions() {
     }
   };
 
-  // Tạo playlist mới
   const createNewPlaylist = async () => {
     if (!newPlaylistName.value.trim()) {
       message.error('Vui lòng nhập tên playlist');
@@ -77,9 +73,8 @@ export function useSongActions() {
     }
     
     try {
-      // Tạo playlist mới (cần implement API)
       const newPlaylist = {
-        id: Date.now(), // Temporary ID
+        id: Date.now(),
         name: newPlaylistName.value.trim(),
         songCount: 0
       };
@@ -93,7 +88,6 @@ export function useSongActions() {
     }
   };
 
-  // Load danh sách playlist
   const loadPlaylists = async () => {
     try {
       const myPlaylistRes = await getMyPlaylists();

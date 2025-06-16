@@ -250,7 +250,7 @@ watch(() => props.currentTime, (time) => {
 }
 
 .lyric-translation {
-  font-size: 14px;
+  font-size: 12px;
   color: rgba(204, 204, 204, 0.8);
   margin-top: 8px;
   font-style: italic;

@@ -230,6 +230,7 @@
           v-if="currentSong"
           ref="playerRef"
           :current-song="currentSong"
+          :is-favorite="currentSong.isFavorite"
           :is-playing="isPlaying"
           :playlist="songs"
           @toggle-play="togglePlay"
@@ -237,6 +238,7 @@
           @prev-song="prevSong"
           @update-shuffle="handleShuffleUpdate"
           @timeupdate="updateAudioTime"
+          @favorite-updated="handleFavoriteUpdate"
           :is-shuffled="isShuffled"
         />
       </div>
@@ -326,8 +328,8 @@
             </div>
           </div>
           <div class="song-actions">
-            <a-button type="text" @click="toggleFavorite">
-              <i :class="['fa-heart', isFavorite ? 'fa-solid text-danger' : 'fa-regular']"></i>
+            <a-button type="text" @click="toggleFavorite(currentSong.id)">
+              <i :class="['fa-heart', isFavorite(currentSong.id) ? 'fa-solid text-danger' : 'fa-regular']"></i>
             </a-button>
             <a-button type="text">
               <i class="fa-solid fa-share-nodes"></i>
@@ -457,6 +459,7 @@ import { message } from 'ant-design-vue'
 import { getSongs, getRandomSongs, getSongByPlaylist } from '@/services/songService'
 import { getMyPlaylists } from '@/services/playlistService'
 import { useProfileStore } from '@/stores/useProfile.js'
+import { useFavoriteStore } from '@/stores/useFavoriteStore'
 import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
 import logoutImage from '@/assets/client/guide/logout_done.png';
 import guideImage1 from '@/assets/client/guide/guide.png';
@@ -465,17 +468,14 @@ import guideImage2 from '@/assets/client/guide/guide.png';
 import adminLogo from '@/assets/img/admin-logo.png';
 
 const originalPlaylist = ref([]);
+const favoriteStore = useFavoriteStore()
 
 const getSongsFromServer = async () => {
   try {
     const response = await getRandomSongs(1, 21, 20);
-    originalPlaylist.value = response.data.data.map(song => ({
-      ...song,
-      isFavorite: false
-    }));
+    originalPlaylist.value = response.data.data;
     songs.value = [...originalPlaylist.value];
     currentSong.value = songs.value[0];
-    // Thêm console.log để debug nếu cần
     console.log('Songs loaded:', songs.value);
   } catch (error) {
     console.error('Error loading songs:', error);
@@ -509,7 +509,23 @@ currentUser.value = useProfileStore().getProfile();
 
 /*****************Chi tiết bài hát và hệ thống gợi ý*****************/
 const openSongDetail = ref(false);
-const isFavorite = ref(false);
+const isFavorite = (id) => {
+  const song = songs.value.find(s => s.id === id);
+  if (song && typeof song.isFavorite === 'boolean') {
+    return song.isFavorite;
+  }
+  // Fallback về favorite store
+  return favoriteStore.isFavorite(id);
+}
+const handleFavoriteUpdate = (songId, isFavorite) => {
+  const song = songs.value.find(s => s.id === songId)
+  if (song) song.isFavorite = isFavorite
+
+  if (currentSong.value?.id === songId) {
+    currentSong.value.isFavorite = isFavorite
+  }
+}
+
 
 const sameArtistSongs = ref([
   {
@@ -581,11 +597,14 @@ const toggleSongDetail = () => {
   openSongDetail.value = !openSongDetail.value;
 };
 
-const toggleFavorite = () => {
-  isFavorite.value = !isFavorite.value;
-  // Có thể thêm logic lưu vào favorite list ở đây
-};
-
+const toggleFavorite = async (id) => {
+  try {
+    const status = await favoriteStore.toggle(id)
+    handleFavoriteUpdate(id, status)
+  } catch (error) {
+    console.error('Error toggling favorite:', error)
+  }
+}
 const handleKaraokeToggle = (checked) => {
   karaokeMode.value = checked;
 };
@@ -875,10 +894,7 @@ const handlePlayPlaylist = async (playlistId) => {
     const response = await getSongByPlaylist(playlistId);
     console.log('Playlist songs:', response.data.data);
     
-    originalPlaylist.value = response.data.data.map(song => ({
-      ...song,
-      isFavorite: false
-    }));
+    originalPlaylist.value = response.data.data;
     
     songs.value = [...originalPlaylist.value];
     
@@ -926,10 +942,7 @@ const loadPlaylistSongs = async (playlistId) => {
 const loadAllSongs = async () => {
   try {
     const response = await getSongs(1, 100);
-    songs.value = response.data.data.map(song => ({
-      ...song,
-      isFavorite: false
-    }));
+    songs.value = response.data.data;
   } catch (error) {
     console.error('Error loading all songs:', error);
     message.error('Không thể tải danh sách bài hát');
@@ -943,11 +956,13 @@ function updateDrawerWidth() {
   else if (width < 768) drawerLyricWidth.value = '80vw'   // Tablet
   else drawerLyricWidth.value = '350px'                   // Desktop
 }
-onMounted(() => {
-  updateDrawerWidth();
+onMounted(async () => {
+  updateDrawerWidth()
   window.addEventListener('resize', updateDrawerWidth)
-  fetchPlaylists();
-});
+  await fetchPlaylists()
+  const favoriteStore = useFavoriteStore()
+  await favoriteStore.fetchFavoriteIds()
+})
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateDrawerWidth)

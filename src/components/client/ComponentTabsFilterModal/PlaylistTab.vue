@@ -53,6 +53,7 @@
           <h2 class="playlist-detail-title">{{ selectedPlaylist.name }}</h2>
           <p class="playlist-detail-creator">Tạo bởi {{ selectedPlaylist.userName }}</p>
           <p class="playlist-detail-meta">{{ selectedPlaylist.songs.length }} bài hát</p>
+          <p class="playlist-detail-description">{{ selectedPlaylist.description }}</p>
         </div>
       </div>
     </div>
@@ -290,6 +291,12 @@ onMounted(() => {
   margin: 8px 0 0;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.playlist-detail-description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Playlist songs list */

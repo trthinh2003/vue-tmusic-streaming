@@ -1,12 +1,19 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { getMyPlaylists, addSongsToPlaylist } from '@/services/playlistService';
+import { downloadService } from '@/services/downloadService';
+import { usePlaylistSignalStore } from '@/stores/playlistSignalStore';
 
 export function useSongActions() {
   const showPlaylistModal = ref(false);
   const selectedSongForPlaylist = ref(null);
   const playlists = ref([]);
   const newPlaylistName = ref('');
+  const playlistSignalStore = usePlaylistSignalStore();
+
+  const showDownloadModal = ref(false);
+  const selectedSongForDownload = ref(null);
+  const downloadStatuses = ref(new Map());
 
   // Xử lý các hành động với bài hát
   const handleSongAction = (action, song) => {
@@ -42,9 +49,62 @@ export function useSongActions() {
   };
 
   // Xử lý tải xuống
-  const handleDownload = (song) => {
-    console.log('Tải xuống bài hát:', song);
-    message.info(`Đang tải xuống "${song.title}"`);
+  const handleDownload = async (song) => {
+    try {
+      // Check nếu đã download rồi thì hiển thị modal để download lại hoặc chỉ thông báo
+      const status = await downloadService.checkDownloadStatus(song.id);
+      
+      if (status.hasDownloaded) {
+        message.info(`Bài hát "${song.title}" đã được tải xuống trước đó`);
+      }
+      
+      selectedSongForDownload.value = song;
+      showDownloadModal.value = true;
+    } catch (error) {
+      console.error('Error checking download status:', error);
+      // Vẫn cho phép download nếu có lỗi check status
+      selectedSongForDownload.value = song;
+      showDownloadModal.value = true;
+    }
+  };
+  const performDownload = async (downloadInfo) => {
+    const { song, quality } = downloadInfo;
+    const fileName = `${song.title} - ${song.artist} (${quality}).mp3`;
+    
+    try {
+      await downloadService.recordDownload(song.id);
+      downloadStatuses.value.set(song.id, true);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = song.audio;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      message.success(`Đã tải xuống "${song.title}"`);
+      showDownloadModal.value = false;
+    } catch (error) {
+      console.error('Download error:', error);
+      message.error('Có lỗi xảy ra khi tải xuống');
+    }
+  };
+  const checkMultipleDownloadStatus = async (songs) => {
+    try {
+      const promises = songs.map(song => 
+        downloadService.checkDownloadStatus(song.id)
+          .then(response => ({ songId: song.id, hasDownloaded: response.hasDownloaded }))
+          .catch(() => ({ songId: song.id, hasDownloaded: false }))
+      );
+      
+      const results = await Promise.all(promises);
+      results.forEach(result => {
+        downloadStatuses.value.set(result.songId, result.hasDownloaded);
+      });
+    } catch (error) {
+      console.error('Error checking multiple download status:', error);
+    }
+  };
+  const getDownloadStatus = (songId) => {
+    return downloadStatuses.value.get(songId) || false;
   };
 
   // Xử lý chia sẻ
@@ -97,17 +157,27 @@ export function useSongActions() {
     }
   };
 
+  watch(() => playlistSignalStore.refreshFlag, (newVal) => {
+    loadPlaylists();
+  });
+
   return {
     // State
     showPlaylistModal,
     selectedSongForPlaylist,
     playlists,
     newPlaylistName,
+    showDownloadModal,
+    selectedSongForDownload,
+    downloadStatuses,
     
     // Methods
     handleSongAction,
     addSongToPlaylist,
     createNewPlaylist,
-    loadPlaylists
+    loadPlaylists,
+    performDownload,
+    checkMultipleDownloadStatus,
+    getDownloadStatus
   };
 }

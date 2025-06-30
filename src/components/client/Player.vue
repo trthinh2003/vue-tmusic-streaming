@@ -8,8 +8,16 @@
 				<h2>{{ currentSong.title }}</h2>
 				<p>{{ currentSong.artist }}</p>
 			</div>
-			<button class="download-btn position-absolute" @click.stop="showDownloadModal" style="top:0; right:0;">
-				<i class="fa-solid fa-download"></i>
+			<button class="download-btn position-absolute" 
+				@click.stop="showDownloadModal" 
+				:class="{ 'downloaded': hasDownloaded }"
+				:disabled="downloadLoading"
+				style="top:0; right:0;"
+				:title="hasDownloaded ? 'Đã tải xuống' : 'Tải xuống'"
+			>
+				<i class="fa-solid fa-spinner fa-spin" v-if="downloadLoading"></i>
+				<i class="fa-solid fa-download" v-else-if="!hasDownloaded"></i>
+				<i class="fa-solid fa-check" v-else></i>
 			</button>
 			<button
 				class="favorite-btn position-absolute"
@@ -83,11 +91,13 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
-import { message } from 'ant-design-vue'
 import { Icon } from '@iconify/vue';
 import DownloadModal from './DownloadModal.vue';
 import { toggleFavorite as toggleFavoriteAPI } from '@/services/favoriteService';
+import { historyService } from '@/services/historyService'
 import { useFavoriteStore } from '@/stores/useFavoriteStore'
+import { downloadService } from '@/services/downloadService'
+import { usePlayerStore } from '@/stores/playerStore';
 
 const props = defineProps({
 	currentSong: Object,
@@ -108,6 +118,8 @@ const emit = defineEmits([
 	'update-favorite'
 ])
 
+let hasSentHistory = false;
+
 const audioPlayer = ref(null)
 const progressBar = ref(null)
 const currentTime = ref(0)
@@ -119,7 +131,14 @@ const isShuffled = ref(false)
 const isLyricsVisible = ref(false)
 const isDownloadModalVisible = ref(false)
 
+const playerStore = usePlayerStore();
+const isPlaying = computed({
+  get: () => playerStore.isPlaying,
+  set: (value) => playerStore.setPlayingState(value)
+});
+
 const favoriteStore = useFavoriteStore()
+
 const isCurrentSongFavorite = computed(() => {
   if (!props.currentSong?.id) return false
   return favoriteStore.isFavorite(props.currentSong.id)
@@ -174,6 +193,22 @@ const toggleFavorite = async () => {
 	}
 }
 
+/******** Xử lý tải bài hát ********/
+const hasDownloaded = ref(false)
+const downloadLoading = ref(false)
+
+const checkDownloadStatus = async (songId) => {
+  if (!songId) return
+  
+  try {
+    const response = await downloadService.checkDownloadStatus(songId)
+    hasDownloaded.value = response.hasDownloaded
+  } catch (error) {
+    console.error('Error checking download status:', error)
+    hasDownloaded.value = false
+  }
+}
+
 // Hiển thị modal tải xuống
 const showDownloadModal = () => {
 	isDownloadModalVisible.value = true
@@ -185,18 +220,29 @@ const closeDownloadModal = () => {
 }
 
 // Xử lý tải bài hát với chất lượng được chọn
-const handleDownload = (downloadInfo) => {
-	const { song, quality } = downloadInfo
-	const fileName = `${song.title} - ${song.artist} (${quality}).mp3`
-	let downloadUrl = song.audio
-	// Tạo một thẻ a ẩn để tải file
-	const downloadLink = document.createElement('a')
-	downloadLink.href = downloadUrl
-	downloadLink.download = fileName
-	document.body.appendChild(downloadLink)
-	downloadLink.click()
-	document.body.removeChild(downloadLink)
-	console.log(`Đang tải xuống: ${fileName}`)
+const handleDownload = async (downloadInfo) => {
+  const { song, quality } = downloadInfo
+  const fileName = `${song.title} - ${song.artist} (${quality}).mp3`
+  let downloadUrl = song.audio
+  try {
+    downloadLoading.value = true
+    // Ghi lại download vào database TRƯỚC khi tải file
+    await downloadService.recordDownload(song.id)
+    console.log('Download recorded successfully')
+    hasDownloaded.value = true
+    // Tạo một thẻ a ẩn để tải file
+    const downloadLink = document.createElement('a')
+    downloadLink.href = downloadUrl
+    downloadLink.download = fileName
+    document.body.appendChild(downloadLink)
+    downloadLink.click()
+    document.body.removeChild(downloadLink)
+    console.log(`Đang tải xuống: ${fileName}`)
+  } catch (error) {
+    console.error('Download error:', error)
+  } finally {
+    downloadLoading.value = false
+  }
 }
 
 // Tua nhanh 10 giây
@@ -259,8 +305,8 @@ watch(() => props.isFavorite, (newVal) => {
 
 // Watch khi bài hát thay đổi
 watch(() => props.currentSong, (newSong, oldSong) => {
+	hasSentHistory = false;
   if (!audioPlayer.value) return
-  
   // Reset progress khi chuyển bài
   currentTime.value = 0
   progressPercentage.value = 0
@@ -276,6 +322,34 @@ watch(() => props.currentSong, (newSong, oldSong) => {
   console.log('Current song changed:', newSong?.title)
   console.log('Is favorite:', isCurrentSongFavorite.value)
 })
+
+watch(() => props.currentSong?.id, (newSongId) => {
+  if (newSongId) {
+    checkDownloadStatus(newSongId)
+  }
+}, { immediate: true })
+
+watch(currentTime, async (newTime) => {
+  if (!props.currentSong || !audioPlayer.value || hasSentHistory) return;
+
+  const duration = audioPlayer.value.duration || 1;
+  const percentage = newTime / duration;
+
+  if (percentage >= 0.7) {
+    hasSentHistory = true;
+
+    try {
+      await historyService.createHistory(
+        props.currentSong.id,
+        newTime,
+        duration
+      );
+      console.log('Đã gửi lịch sử nghe thành công');
+    } catch (error) {
+      console.error('Gửi lịch sử thất bại:', error);
+    }
+  }
+});
 
 watch(() => props.isPlaying, (newVal) => {
 	if (!audioPlayer.value) return
@@ -538,6 +612,16 @@ defineExpose({
 	border-radius: 50%;
 	padding: 8px;
 	transition: all 0.2s;
+}
+
+.download-btn.downloaded {
+  background-color: #28a745;
+  color: white;
+}
+
+.download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .download-btn:hover {

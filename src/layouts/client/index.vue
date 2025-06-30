@@ -62,7 +62,7 @@
           <span></span>
           <a-button 
             type="text" 
-            @click="goToExplore"
+            @click="openExploreModal"
             class="explore-drawer-btn"
           >
             <Icon icon="mdi:compass-outline" />
@@ -86,7 +86,7 @@
             type="text" 
             class="advance-filter-btn p-1"
             style="background-color: #444; width: 50%;"
-            @click="visibleModalFilter = true"
+            @click="openFilterModal"
           >
             <template #icon>
               <i class="fa-solid fa-filter me-1"></i> Lọc nâng cao
@@ -94,16 +94,21 @@
           </a-button>
         </div>
         <!-- Filter tags cho desktop -->
-        <div class="filter-tags p-2" v-if="hasActiveFilters">
-          <a-tag
-            v-for="(value, key) in activeFilters"
-            :key="key"
-            closable
-            @close="removeFilter(key)"
-            class="mx-1 my-1"
-          >
-            {{ getFilterLabel(key) }}: {{ $truncateWords(value, 5) }}
-          </a-tag>
+        <div class="filter-tags" v-if="hasActiveFilters">
+          <template v-for="(value, key) in activeFilters" :key="key">
+            <a-tag
+              v-if="value && (Array.isArray(value) ? value.length : true)"
+              closable
+              @close="removeFilter(key)"
+              class="mx-1 my-1"
+            >
+              {{ getFilterLabel(key) }}: {{ 
+                Array.isArray(value) ? 
+                $truncateWords(value.join(', '), 5) : 
+                $truncateWords(value, 5) 
+              }}
+            </a-tag>
+          </template>
         </div>
 
         <playlist 
@@ -114,6 +119,7 @@
           @select-song="selectSong"
           @change-playlist="handleChangePlaylist"
           @open-modal="showModal = true"
+          @open-favorite-modal="handleOpenFavoriteModal"
         />
       </div>
     </a-drawer>
@@ -134,9 +140,9 @@
       <div class="advance-filter d-flex align-items-center justify-content-center">
         <a-button 
           type="text" 
-          class="advance-filter-btn p-1 w-75"
-          style="background-color: #444;"
-          @click="visibleModalFilter = true"
+          class="advance-filter-btn p-1"
+          style="background-color: #444; width: 50%;"
+          @click="openFilterModal"
         >
           <template #icon>
             <i class="fa-solid fa-filter me-1"></i> Lọc nâng cao
@@ -145,16 +151,21 @@
       </div>
 
       <!-- Filter tags cho desktop -->
-      <div class="filter-tags p-2" v-if="hasActiveFilters">
-        <a-tag
-          v-for="(value, key) in activeFilters"
-          :key="key"
-          closable
-          @close="removeFilter(key)"
-          class="mx-1 my-1"
-        >
-          {{ getFilterLabel(key) }}: {{ value }}
-        </a-tag>
+      <div class="filter-tags" v-if="hasActiveFilters">
+        <template v-for="(value, key) in activeFilters" :key="key">
+          <a-tag
+            v-if="value && (Array.isArray(value) ? value.length : true)"
+            closable
+            @close="removeFilter(key)"
+            class="mx-1 my-1"
+          >
+            {{ getFilterLabel(key) }}: {{ 
+              Array.isArray(value) ? 
+              $truncateWords(value.join(', '), 5) : 
+              $truncateWords(value, 5) 
+            }}
+          </a-tag>
+        </template>
       </div>
 
       <playlist 
@@ -165,6 +176,7 @@
         @select-song="selectSong"
         @change-playlist="handleChangePlaylist"
         @open-modal="showModal = true"
+        @open-favorite-modal="handleOpenFavoriteModal"
         class="d-none d-sm-block"
       />
     </div>
@@ -188,7 +200,7 @@
 
         <a-button 
           type="text" 
-          @click="goToExplore"
+          @click="openExploreModal"
           class="explore-header-btn"
         >
           <Icon icon="mdi:compass-outline" class="me-2" />
@@ -245,11 +257,15 @@
     </div>
   </div>
   <FilterModal 
-    v-model="visibleModalFilter"
+    v-model="visibleFilterModal"
     v-model:filters="filters"
     @apply-filter="applyFilter"
+    @clear-filters="clearAllFilters"
     @update:filters="updateFilters"
-    @update:modelValue="visibleModalFilter = false"
+  />
+  <ExploreModal 
+    v-model="visibleExploreModal"
+    @update:modelValue="visibleExploreModal = false"
     @pause-play="handlePausePlay"
   />
   <a-button type="text" class="toggle-sidebar-btn me-2" @click="toggleRightDrawer">
@@ -436,6 +452,11 @@
     @refresh="fetchPlaylists"
     @close="showModal = false"
   />
+  <FavoriteModal
+    :open="showFavoriteModal"
+    @update:open="showFavoriteModal = $event"
+    @close="handleCloseFavoriteModal"
+  />
   <HelpGuideModal 
     v-model="helpModalVisible"
     :steps="helpSteps"
@@ -448,9 +469,11 @@ import { ref, onMounted, watch, computed, onBeforeUnmount  } from 'vue'
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
 import PlayListModal from '@/components/client/PlayListModal.vue'
-import FilterModal from '@/components/client/FilterModal.vue'
+import ExploreModal from '@/components/client/ExploreModal.vue'
 import LyricWithComments from '@/components/client/LyricWithComments.vue'
 import HelpGuideModal from '@/components/client/HelpGuideModal.vue'
+import FavoriteModal from '@/components/client/FavoriteModal.vue'
+import FilterModal from '@/components/client/FilterModal.vue'
 import { Button, Drawer, Input } from 'ant-design-vue'
 import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
@@ -460,6 +483,8 @@ import { getSongs, getRandomSongs, getSongByPlaylist } from '@/services/songServ
 import { getMyPlaylists } from '@/services/playlistService'
 import { useProfileStore } from '@/stores/useProfile.js'
 import { useFavoriteStore } from '@/stores/useFavoriteStore'
+import { useNextSongSignalStore } from '@/stores/nextSongSignalStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
 import logoutImage from '@/assets/client/guide/logout_done.png';
 import guideImage1 from '@/assets/client/guide/guide.png';
@@ -469,6 +494,8 @@ import adminLogo from '@/assets/img/admin-logo.png';
 
 const originalPlaylist = ref([]);
 const favoriteStore = useFavoriteStore()
+const nextSongSignalStore = useNextSongSignalStore();
+const playerStore = usePlayerStore();
 
 const getSongsFromServer = async () => {
   try {
@@ -487,13 +514,17 @@ getSongsFromServer();
 const songs = ref([...originalPlaylist.value])
 const currentUser = ref({})
 const currentSong = ref(songs.value[0])
-const isPlaying = ref(false)
+const isPlaying = computed({
+  get: () => playerStore.isPlaying,
+  set: (value) => playerStore.setPlayingState(value)
+});
 const isShuffled = ref(false)
 const visible = ref(false)
 const showMobileSearch = ref(false) 
 const searchQuery = ref('')
 const router = useRouter()
-const visibleModalFilter = ref(false);
+const visibleExploreModal = ref(false);
+const visibleFilterModal = ref(false);
 const filters = ref({ songName: '', artistName: '', genre: '' });
 const showRightDrawer = ref(true)
 const openRightDrawer = ref(false)
@@ -609,28 +640,48 @@ const handleKaraokeToggle = (checked) => {
   karaokeMode.value = checked;
 };
 
-const applyFilter = () => {
-  // Nếu không có bộ lọc nào, khôi phục danh sách gốc
-  if (!hasActiveFilters.value) {
-    songs.value = [...originalPlaylist];
-    return;
+const openFilterModal = () => {
+  visibleFilterModal.value = true;
+};
+
+const applyFilter = (appliedFilters) => {
+  try {
+    const safeFilters = appliedFilters || { 
+      songName: '', 
+      artistName: '', 
+      genres: [] 
+    };
+    if (!safeFilters.songName && !safeFilters.artistName && 
+        (!safeFilters.genres || safeFilters.genres.length === 0)) {
+      songs.value = [...originalPlaylist.value];
+    } else {
+      songs.value = originalPlaylist.value.filter(song => {
+        const matchesSongName = safeFilters.songName 
+          ? song.title.toLowerCase().includes(safeFilters.songName.toLowerCase())
+          : true;
+        const matchesArtistName = safeFilters.artistName 
+          ? song.artist.toLowerCase().includes(safeFilters.artistName.toLowerCase())
+          : true;
+        const matchesGenres = safeFilters.genres?.length > 0
+          ? safeFilters.genres.some(genre => 
+              song.genre.toLowerCase().includes(genre.toLowerCase()))
+          : true;
+        return matchesSongName && matchesArtistName && matchesGenres;
+      });
+    }
+    if (songs.value.length > 0 && !songs.value.some(s => s.id === currentSong.value?.id)) {
+      currentSong.value = songs.value[0];
+    }
+    visibleFilterModal.value = false;
+    message.success(`Đã lọc được ${songs.value.length} bài hát`);
+  } catch (error) {
+    console.error('Filter error:', error);
+    message.error('Có lỗi khi áp dụng bộ lọc');
   }
-  // Áp dụng bộ lọc
-  songs.value = originalPlaylist.filter(song => {
-    const matchesSongName = filters.value.songName 
-      ? song.title.toLowerCase().includes(filters.value.songName.toLowerCase())
-      : true;
-    
-    const matchesArtistName = filters.value.artistName 
-      ? song.artist.toLowerCase().includes(filters.value.artistName.toLowerCase())
-      : true;
-    
-    const matchesGenre = filters.value.genre 
-      ? song.genre.toLowerCase().includes(filters.value.genre.toLowerCase())
-      : true;
-    
-    return matchesSongName && matchesArtistName && matchesGenre;
-  });
+};
+const clearAllFilters = () => {
+  filters.value = { songName: '', artistName: '', genres: [] };
+  songs.value = [...originalPlaylist.value];
 };
 
 const playerRef = ref(null);
@@ -656,8 +707,12 @@ const activeFilters = computed(() => {
 
 // Method để xóa từng bộ lọc
 const removeFilter = (filterKey) => {
-  filters.value[filterKey] = '';
-  applyFilter(); // Áp dụng lại bộ lọc sau khi xóa
+  if (filterKey === 'genres') {
+    filters.value.genres = [];
+  } else {
+    filters.value[filterKey] = '';
+  }
+  applyFilter(filters.value);
 };
 
 // Method để hiển thị label cho từng loại filter
@@ -741,7 +796,8 @@ const handleShuffleUpdate = (shuffleStatus) => {
 // Chọn bài hát
 const selectSong = (song) => {
   currentSong.value = song
-  isPlaying.value = true
+  playerStore.setCurrentSongId(song.id);
+  playerStore.setPlayingState(true);
   visible.value = false // Đóng Drawer khi chọn bài hát trên mobile
 }
 
@@ -761,6 +817,7 @@ const nextSong = () => {
   const nextIndex = (currentIndex + 1) % filteredSongs.value.length
   currentSong.value = filteredSongs.value[nextIndex]
   isPlaying.value = true
+  nextSongSignalStore.triggerRefresh(currentSong.value.id)
 }
 
 // Bài trước đó
@@ -769,6 +826,7 @@ const prevSong = () => {
   const prevIndex = (currentIndex - 1 + filteredSongs.value.length) % filteredSongs.value.length
   currentSong.value = filteredSongs.value[prevIndex]
   isPlaying.value = true
+  nextSongSignalStore.triggerRefresh(currentSong.value.id)
 }
 
 watch(isShuffled, (newVal) => {
@@ -809,9 +867,10 @@ watch(currentSong, async (newSong) => {
   }
 }, { immediate: true });
 
-// Thêm hàm cập nhật thời gian audio
+// Hàm cập nhật thời gian audio
 const updateAudioTime = (time) => {
   currentAudioTime.value = time;
+  playerStore.setCurrentTime(time);
 };
 
 const toggleRightDrawer = () => {
@@ -865,6 +924,15 @@ const showHelpModal = (e) => {
 
 const handleHelpModalClose = () => {
   helpModalVisible.value = false;
+};
+
+// Modal Favorite
+const showFavoriteModal = ref(false);
+const handleOpenFavoriteModal = () => {
+  showFavoriteModal.value = true;
+};
+const handleCloseFavoriteModal = () => {
+  showFavoriteModal.value = false;
 };
 
 // Modal Playlist
@@ -997,13 +1065,9 @@ const confirmLogout = async () => {
 };
 
 //Sang trang Khám phá
-const goToExplore = async () => {
-  const loading = message.loading('Đang chuyển trang...', 0);
-  await router.push({ name: 'explore' }).then(() => {
-    window.location.reload();
-  });
-  loading();
-  visible.value = false;
+const openExploreModal = () => {
+  visibleExploreModal.value = true;
+  visible.value = false; // Đóng drawer mobile nếu đang mở
 };
 </script>
 
@@ -1113,7 +1177,7 @@ const goToExplore = async () => {
 .filter-tags {
   background: rgba(26, 26, 46, 0.9);
   border-radius: 8px;
-  margin: 8px;
+  margin: 2px;
 }
 
 .ant-tag {

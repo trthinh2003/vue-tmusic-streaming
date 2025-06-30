@@ -38,6 +38,7 @@
 
 <script setup>
 import { ref, watch, nextTick, computed } from 'vue';
+import { usePlayerStore } from '@/stores/playerStore';
 
 const props = defineProps({
   lyrics: String,
@@ -51,15 +52,20 @@ const props = defineProps({
 
 const emit = defineEmits(['seek', 'toggle-play']);
 
-const isPlaying = ref(true);
+const playerStore = usePlayerStore();
+
+const isPlaying = computed({
+  get: () => playerStore.isPlaying,
+  set: (value) => playerStore.setPlayingState(value)
+});
 const parsedLyrics = ref([]);
 const currentLineIndex = ref(-1);
 const currentPartIndex = ref(0);
 const animationInProgress = ref(false);
 
+
 const togglePlayPause = () => {
   isPlaying.value = !isPlaying.value;
-  emit('toggle-play', isPlaying.value);
 };
 
 const handleLyricClick = (time) => {

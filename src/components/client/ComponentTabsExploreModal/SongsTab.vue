@@ -31,6 +31,7 @@
           <div class="music-actions">
             <SongActionDropdown 
               :song="song" 
+              :is-downloaded="getDownloadStatus(song.id)"
               @action="handleSongAction"
             />
           </div>
@@ -54,7 +55,9 @@ const props = defineProps({
   isPlaying: Boolean,
   filteredSongs: Array,
   isSearching: Boolean,
-  searchQuery: String
+  searchQuery: String,
+  downloadStatuses: Map,
+  getDownloadStatus: Function
 });
 
 const emit = defineEmits(['play-song', 'song-action']);

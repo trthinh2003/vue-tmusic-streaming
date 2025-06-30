@@ -3,15 +3,34 @@
     <div class="playlist-header">
       <h2>Playlist</h2>
       <div class="actions">
-        <a-button 
-          type="primary" 
-          @click="emitOpenModal" 
-          size="small"
-          class="playlist-btn"
-        >
-          <template #icon><menu-outlined /></template>
-          Quản lý Playlist
-        </a-button>
+        <!-- Nút Playlist với tooltip -->
+        <a-tooltip title="Quản lý Playlist" placement="top">
+          <a-button 
+            type="primary" 
+            @click="emitOpenModal" 
+            size="small"
+            class="playlist-btn"
+          >
+            <template #icon>
+              <Icon icon="material-symbols:queue-music" />
+            </template>
+          </a-button>
+        </a-tooltip>
+        
+        <!-- Nút Yêu thích với tooltip -->
+        <a-tooltip title="Danh sách Yêu thích" placement="top">
+          <a-button 
+            type="primary" 
+            @click="emitOpenFavoriteModal" 
+            size="small"
+            class="favorite-btn"
+            style="background-color: #ff4d4f; border-color: #ff4d4f;"
+          >
+            <template #icon>
+              <Icon icon="ph:heart-fill" />
+            </template>
+          </a-button>
+        </a-tooltip>
       </div>
     </div>
     
@@ -20,15 +39,19 @@
         <span class="playlist-name">{{ currentPlaylist.name }}</span>
         <span class="song-count">{{ filteredSongs.length }} bài hát</span>
       </div>
-      <a-button 
-        type="text" 
-        size="small" 
-        @click="clearPlaylist"
-        class="clear-btn"
-      >
-        <template #icon><close-outlined /></template>
-        Xóa playlist
-      </a-button>
+      <a-tooltip title="Xóa playlist hiện tại" placement="top">
+        <a-button 
+          type="text" 
+          size="small" 
+          @click="clearPlaylist"
+          class="clear-btn"
+        >
+          <template #icon>
+            <Icon icon="material-symbols:close" />
+          </template>
+          Xóa playlist
+        </a-button>
+      </a-tooltip>
     </div>
     
     <div class="song-list-container">
@@ -51,30 +74,36 @@
     
     <div v-if="filteredSongs.length > itemsPerPage" class="pagination-controls">
       <div class="simple-pagination">
-        <button 
-          class="page-button prev"
-          :disabled="currentPage === 1"
-          @click="goToPage(currentPage - 1)"
-        >
-          <left-outlined />
-        </button>
+        <a-tooltip title="Trang trước" placement="top">
+          <button 
+            class="page-button prev"
+            :disabled="currentPage === 1"
+            @click="goToPage(currentPage - 1)"
+          >
+            <Icon icon="material-symbols:chevron-left" />
+          </button>
+        </a-tooltip>
+        
         <span class="page-indicator">{{ currentPage }}/{{ totalPages }}</span>
-        <button 
-          class="page-button next"
-          :disabled="currentPage === totalPages"
-          @click="goToPage(currentPage + 1)"
-        >
-          <right-outlined />
-        </button>
+        
+        <a-tooltip title="Trang sau" placement="top">
+          <button 
+            class="page-button next"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(currentPage + 1)"
+          >
+            <Icon icon="material-symbols:chevron-right" />
+          </button>
+        </a-tooltip>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { MenuOutlined, CloseOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons-vue';
 import SongItem from './SongItem.vue';
 import { ref, computed } from 'vue';
+import { Icon } from '@iconify/vue';
 
 const props = defineProps({
   songs: {
@@ -99,7 +128,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['select-song', 'change-playlist', 'open-modal']);
+const emit = defineEmits(['select-song', 'change-playlist', 'open-modal', 'open-favorite-modal']);
 
 const currentPage = ref(1);
 
@@ -132,6 +161,11 @@ const handlePageChange = (page) => {
 
 const emitOpenModal = () => {
   emit('open-modal');
+};
+
+// Phát sự kiện mở modal yêu thích
+const emitOpenFavoriteModal = () => {
+  emit('open-favorite-modal');
 };
 
 const clearPlaylist = () => {
@@ -189,6 +223,19 @@ const goToPage = (page) => {
 
 .playlist-btn:hover {
   background: #369970;
+}
+
+.favorite-btn:hover {
+  background: #ff7875 !important;
+  border-color: #ff7875 !important;
+}
+
+/* Icon styling */
+:deep(.iconify) {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .current-playlist-info {
@@ -332,6 +379,19 @@ ul {
   text-align: center;
 }
 
+/* Tooltip styling */
+:deep(.ant-tooltip-inner) {
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+:deep(.ant-tooltip-arrow::before) {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
 @media (max-width: 768px) {
   .playlist {
     padding-bottom: 60px; /* Tạo khoảng trống cho phân trang */
@@ -362,6 +422,11 @@ ul {
   .page-indicator {
     font-size: 13px;
     min-width: 40px;
+  }
+  
+  :deep(.iconify) {
+    font-size: 16px;
+    margin-left: 2px;
   }
 }
 </style>

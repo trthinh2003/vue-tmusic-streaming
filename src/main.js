@@ -29,7 +29,9 @@ import {
     Pagination,
     List,
     Slider,
-    AutoComplete
+    AutoComplete,
+    Checkbox,
+    Divider
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -74,6 +76,8 @@ app.use(Pagination)
 app.use(List)
 app.use(Slider)
 app.use(AutoComplete)
+app.use(Checkbox)
+app.use(Divider)
 app.use(formatDate)
 app.use(truncateWords)
 app.use({

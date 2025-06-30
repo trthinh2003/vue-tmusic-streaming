@@ -2,6 +2,9 @@
   <div class="comment-section">
     <!-- Danh sách bình luận -->
     <div class="comment-list" ref="commentList">
+      <div v-if="comments.length === 0 && !loading" class="no-comments">
+        Chưa có bình luận nào cho bài hát này.
+      </div>
       <a-comment 
         v-for="comment in comments" 
         :key="comment.id"
@@ -28,6 +31,40 @@
             <a-button type="text" size="small" @click="showReply(comment)">
               Trả lời
             </a-button>
+          </div>
+          
+          <!-- Form trả lời bình luận (đặt ngay dưới comment actions) -->
+          <div v-if="replyingComment && replyingComment.id === comment.id" class="reply-form">
+            <a-comment>
+              <template #avatar>
+                <a-avatar :src="currentUser.avatar" size="small" />
+              </template>
+              <template #content>
+                <a-textarea
+                  v-model:value="replyContent"
+                  :placeholder="`Trả lời ${replyingComment.user.name}...`"
+                  :rows="2"
+                  :auto-size="{ minRows: 2, maxRows: 4 }"
+                />
+                <div class="reply-form-actions">
+                  <a-button 
+                    size="small" 
+                    @click="cancelReply"
+                  >
+                    Hủy
+                  </a-button>
+                  <a-button 
+                    type="primary" 
+                    size="small"
+                    @click="submitReply"
+                    :disabled="!replyContent.trim()"
+                    :loading="replySubmitting"
+                  >
+                    Trả lời
+                  </a-button>
+                </div>
+              </template>
+            </a-comment>
           </div>
           
           <!-- Phần trả lời -->
@@ -91,11 +128,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
+import { getComments, createComment, createCommentReply, toggleCommentLike } from '@/services/commentService';
+import { useNextSongSignalStore } from '@/stores/nextSongSignalStore';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -116,42 +155,20 @@ const newComment = ref('');
 const submitting = ref(false);
 const loading = ref(false);
 const commentList = ref(null);
+const replyingComment = ref(null);
+const replyContent = ref('');
+const replySubmitting = ref(false);
 
-// Lấy danh sách bình luận
+const nextSongSignalStore = useNextSongSignalStore();
+
+// Lấy danh sách bình luận từ API
 const fetchComments = async () => {
   try {
     loading.value = true;
-    // Giả lập API call
-    const mockComments = [
-      {
-        id: 1,
-        content: 'Bài hát này thật tuyệt vời!',
-        createdAt: '2023-05-15T10:30:00Z',
-        user: {
-          id: 2,
-          name: 'Người nghe nhiệt tình',
-          avatar: 'https://randomuser.me/api/portraits/women/1.jpg'
-        },
-        likeCount: 5,
-        isLiked: false,
-        replies: [
-          {
-            id: 3,
-            content: 'Mình cũng nghĩ vậy!',
-            createdAt: '2023-05-15T11:00:00Z',
-            user: {
-              id: 3,
-              name: 'Fan cứng',
-              avatar: 'https://randomuser.me/api/portraits/men/2.jpg'
-            }
-          }
-        ]
-      },
-      // Thêm các comment khác...
-    ];
+    const response = await getComments(props.songId);
     
-    // Format thời gian
-    comments.value = mockComments.map(comment => ({
+    // Format thời gian cho comments
+    comments.value = response.data.map(comment => ({
       ...comment,
       fullTime: dayjs(comment.createdAt).format('HH:mm DD/MM/YYYY'),
       relativeTime: dayjs(comment.createdAt).fromNow(),
@@ -163,6 +180,7 @@ const fetchComments = async () => {
     }));
     
   } catch (error) {
+    console.error('Error fetching comments:', error);
     message.error('Lỗi khi tải bình luận');
   } finally {
     loading.value = false;
@@ -176,23 +194,22 @@ const submitComment = async () => {
   try {
     submitting.value = true;
     
-    // Giả lập API call
-    const newCommentObj = {
-      id: Date.now(),
+    const commentData = {
       content: newComment.value.trim(),
-      createdAt: new Date().toISOString(),
-      user: { ...props.currentUser },
-      likeCount: 0,
-      isLiked: false,
+      songId: props.songId
+    };
+    
+    const response = await createComment(commentData);
+    
+    // Thêm comment mới vào đầu danh sách
+    const newCommentObj = {
+      ...response.data,
+      fullTime: dayjs(response.data.createdAt).format('HH:mm DD/MM/YYYY'),
+      relativeTime: 'Vừa xong',
       replies: []
     };
     
-    comments.value.unshift({
-      ...newCommentObj,
-      fullTime: dayjs(newCommentObj.createdAt).format('HH:mm DD/MM/YYYY'),
-      relativeTime: 'Vừa xong'
-    });
-    
+    comments.value.unshift(newCommentObj);
     newComment.value = '';
     message.success('Bình luận đã được gửi');
     
@@ -204,26 +221,97 @@ const submitComment = async () => {
     }, 100);
     
   } catch (error) {
-    message.error('Gửi bình luận thất bại');
+    console.error('Error creating comment:', error);
+    if (error.response?.status === 401) {
+      message.error('Vui lòng đăng nhập để bình luận');
+    } else {
+      message.error('Gửi bình luận thất bại');
+    }
   } finally {
     submitting.value = false;
   }
 };
 
 // Like/unlike comment
-const toggleLike = (comment) => {
-  comment.isLiked = !comment.isLiked;
-  comment.likeCount += comment.isLiked ? 1 : -1;
+const toggleLike = async (comment) => {
+  try {
+    const response = await toggleCommentLike(comment.id);
+    
+    // Cập nhật trạng thái like trong UI
+    comment.isLiked = response.data.isLiked;
+    comment.likeCount += response.data.isLiked ? 1 : -1;
+    
+  } catch (error) {
+    console.error('Error toggling like:', error);
+    if (error.response?.status === 401) {
+      message.error('Vui lòng đăng nhập để thích bình luận');
+    } else {
+      message.error('Có lỗi xảy ra khi thích bình luận');
+    }
+  }
 };
 
 // Hiển thị form trả lời
 const showReply = (comment) => {
-  message.info(`Trả lời bình luận của ${comment.user.name}`);
+  replyingComment.value = comment;
+  replyContent.value = '';
 };
+
+// Hủy trả lời
+const cancelReply = () => {
+  replyingComment.value = null;
+  replyContent.value = '';
+};
+
+// Gửi trả lời
+const submitReply = async () => {
+  if (!replyContent.value.trim() || !replyingComment.value) return;
+
+  try {
+    replySubmitting.value = true;
+
+    const replyData = {
+      replyContent: replyContent.value.trim(),
+      commentId: replyingComment.value.id
+    };
+    const response = await createCommentReply(replyData);
+    const parentComment = comments.value.find(c => c.id === replyingComment.value.id);
+    if (parentComment) {
+      const newReply = {
+        ...response.data,
+        fullTime: dayjs(response.data.createdAt).format('HH:mm DD/MM/YYYY'),
+        relativeTime: 'Vừa xong'
+      };
+
+      parentComment.replies.push(newReply);
+    }
+    replyingComment.value = null;
+    replyContent.value = '';
+    message.success('Trả lời đã được gửi');
+
+  } catch (error) {
+    console.error('Error creating reply:', error);
+    if (error.response?.status === 401) {
+      message.error('Vui lòng đăng nhập để trả lời bình luận');
+    } else {
+      message.error('Gửi trả lời thất bại');
+    }
+  } finally {
+    replySubmitting.value = false;
+  }
+};
+
+watch(() => nextSongSignalStore.refreshFlag, () => {
+  fetchComments();
+});
+
+// watch(() => props.songId, (newSongId) => {
+//   fetchComments();
+// }, { immediate: true });
 
 onMounted(() => {
   fetchComments();
-});
+})
 </script>
 
 <style scoped>
@@ -251,7 +339,26 @@ onMounted(() => {
 }
 
 .comment-actions {
+  display: flex;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.comment-actions .ant-btn {
+  padding: 0 8px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comment-actions .fa-heart {
+  font-size: 12px;
+  transition: color 0.3s ease;
+}
+
+.comment-actions .fa-heart.liked {
+  color: #ff4d4f;
 }
 
 .comment-actions button {
@@ -264,6 +371,29 @@ onMounted(() => {
 
 :deep(.ant-comment .ant-comment-content-author-name >*) {
   color: #00eeff;
+}
+
+:deep(.ant-comment .ant-comment-content-author-time) {
+  color: rgb(198, 188, 26);
+}
+
+.reply-form {
+  margin-top: 12px;
+  padding-left: 32px;
+}
+
+.reply-form-actions {
+  margin-top: 8px;
+  text-align: right;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.reply-form-actions .ant-btn {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .ant-btn-primary:disabled {
@@ -300,10 +430,30 @@ onMounted(() => {
   text-align: right;
 }
 
+.no-comments {
+  padding: 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
 .loading-spinner {
   display: flex;
   justify-content: center;
   padding: 16px;
+}
+@media (max-width: 768px) {
+  .comment-form {
+    padding: 12px;
+  }
+  
+  .reply-form {
+    padding-left: 20px;
+  }
+  
+  .reply-list {
+    padding-left: 20px;
+  }
 }
 </style>
 

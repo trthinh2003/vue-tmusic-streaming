@@ -13,9 +13,12 @@
           <template #icon><heart-outlined /></template>
           Yêu thích
         </a-menu-item>
-        <a-menu-item key="download">
-          <template #icon><download-outlined /></template>
-          Tải xuống
+        <a-menu-item key="download" :class="{ 'downloaded': isDownloaded }">
+          <template #icon>
+            <check-outlined v-if="isDownloaded" style="color: #28a745;" />
+            <download-outlined v-else />
+          </template>
+          {{ isDownloaded ? 'Đã tải xuống' : 'Tải xuống' }}
         </a-menu-item>
         <a-menu-item key="share">
           <template #icon><share-alt-outlined /></template>
@@ -29,13 +32,17 @@
 <script setup>
 import { 
   MoreOutlined, PlusOutlined, HeartOutlined, 
-  DownloadOutlined, ShareAltOutlined 
+  DownloadOutlined, ShareAltOutlined, CheckOutlined 
 } from '@ant-design/icons-vue';
 
 const props = defineProps({
   song: {
     type: Object,
     required: true
+  },
+  isDownloaded: {
+    type: Boolean,
+    default: false
   }
 });
 

@@ -10,7 +10,7 @@
         <div class="song-cards">
           <div 
             class="song-card" 
-            v-for="(song, index) in suggestedSongs" 
+            v-for="(song, index) in displaySuggestedSongs" 
             :key="'suggested-' + index"
             @click="$emit('play-song', song)"
             :class="{ 'active-card': currentSong?.id === song.id }"
@@ -164,23 +164,22 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue';
 import { PlayCircleFilled, PauseCircleFilled } from '@ant-design/icons-vue'
 import SongActionDropdown from '@/components/client/SongActionDropdown.vue';
+import { getRecommendSongs } from '@/services/recommendService.js';
+
+// Reactive data
+const recommendSongs = ref([]);
 
 // Props
 const props = defineProps({
   currentSong: Object,
   isPlaying: Boolean,
-  // Dữ liệu mẫu - sau này sẽ được thay thế bằng dữ liệu thật
+  // Optional prop for overriding suggested songs
   suggestedSongs: {
     type: Array,
-    default: () => [
-      { id: 1, title: 'Chúng Ta Của Hiện Tại', artist: 'Sơn Tùng M-TP', cover: 'https://via.placeholder.com/150', playCount: 1200000 },
-      { id: 2, title: 'Em Không Sai Chúng Ta Sai', artist: 'Erik', cover: 'https://via.placeholder.com/150', playCount: 980000 },
-      { id: 3, title: 'Hoa Hải Đường', artist: 'Jack', cover: 'https://via.placeholder.com/150', playCount: 1500000 },
-      { id: 4, title: 'Muộn Rồi Mà Sao Còn', artist: 'Sơn Tùng M-TP', cover: 'https://via.placeholder.com/150', playCount: 800000 },
-      { id: 5, title: 'Yêu Đơn Phương', artist: 'Dương Edward', cover: 'https://via.placeholder.com/150', playCount: 600000 }
-    ]
+    default: () => []
   },
   trendingSongs: {
     type: Array,
@@ -219,6 +218,13 @@ const props = defineProps({
   }
 })
 
+// Computed property to handle suggested songs display
+const displaySuggestedSongs = computed(() => {
+  // If suggestedSongs prop is provided and not empty, use it
+  // Otherwise, use the fetched recommendSongs
+  return props.suggestedSongs.length > 0 ? props.suggestedSongs : recommendSongs.value;
+})
+
 // Emits
 const emit = defineEmits(['play-song', 'song-action', 'view-artist', 'view-playlist'])
 
@@ -252,6 +258,17 @@ const formatReleaseDate = (dateStr) => {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`
   return `${Math.floor(diffDays / 30)} tháng trước`
 }
+
+onMounted(async() => {
+  try {
+    const songRecommendations = await getRecommendSongs(10);
+    console.log(songRecommendations.data.data);
+    recommendSongs.value = songRecommendations.data.data;
+    console.log([...recommendSongs.value]);
+  } catch (error) {
+    console.error('Error fetching recommended songs:', error);
+  }
+})
 </script>
 
 <style scoped>

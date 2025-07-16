@@ -309,111 +309,20 @@
   <div class="song-detail-trigger" @click="toggleSongDetail">
     <i class="fa-solid fa-chevron-up"></i>
   </div>
-  <a-drawer
-    class="song-detail-drawer"
-    :height="600"
-    title="Chi tiết bài hát"
-    placement="bottom"
-    :open="openSongDetail"
-    @close="toggleSongDetail"
-    :header-style="{
-      background: 'rgba(26, 26, 46, 0.9)',
-      color: 'white'
-    }"
-    :body-style="{
-      backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${tmusicbackground2})`,
-      backgroundSize: 'cover',
-      backgroundRepeat: 'no-repeat',
-      backgroundPosition: 'center',
-      padding: 0
-    }"
-  >
-    <div class="song-detail-container">
-      <!-- Cột trái - Thông tin bài hát hiện tại -->
-      <div class="left-column">
-        <div class="song-detail-content">
-          <div class="song-cover-container">
-            <img :src="currentSong.cover" alt="Song cover" class="song-cover" />
-          </div>
-          <div class="song-info">
-            <h3>{{ currentSong.title }}</h3>
-            <p class="artist">{{ currentSong.artist }}</p>
-            <div class="song-meta">
-              <span class="genre">{{ currentSong.genre }}</span>
-              <span class="duration">{{ currentSong.duration }}</span>
-            </div>
-          </div>
-          <div class="song-actions">
-            <a-button type="text" @click="toggleFavorite(currentSong.id)">
-              <i :class="['fa-heart', isFavorite(currentSong.id) ? 'fa-solid text-danger' : 'fa-regular']"></i>
-            </a-button>
-            <a-button type="text">
-              <i class="fa-solid fa-share-nodes"></i>
-            </a-button>
-            <a-button type="text" @click="toggleRightDrawer">
-              <i class="fa-solid fa-comment-dots"></i>
-            </a-button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Cột phải - Danh sách bài hát -->
-      <div class="right-column">
-        <div class="song-lists">
-          <!-- Bài hát cùng ca sĩ -->
-          <div class="song-list-section">
-            <h4 class="section-title">
-              <i class="fa-solid fa-music"></i>
-              Bài hát cùng ca sĩ
-            </h4>
-            <div class="song-list">
-              <div 
-                v-for="song in sameArtistSongs" 
-                :key="song.id"
-                class="song-item"
-                :class="{ active: song.id === currentSong.id }"
-                @click="selectSong(song)"
-              >
-                <img :src="song.cover" alt="Song cover" class="song-item-cover" />
-                <div class="song-item-info">
-                  <p class="song-item-title">{{ song.title }}</p>
-                  <p class="song-item-duration">{{ song.duration }}</p>
-                </div>
-                <button class="play-btn" @click.stop="playSong(song)">
-                  <i class="fa-solid fa-play"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bài hát gợi ý -->
-          <div class="song-list-section">
-            <h4 class="section-title">
-              <i class="fa-solid fa-thumbs-up"></i>
-              Gợi ý cho bạn
-            </h4>
-            <div class="song-list">
-              <div 
-                v-for="song in suggestedSongs" 
-                :key="song.id"
-                class="song-item"
-                @click="selectSong(song)"
-              >
-                <img :src="song.cover" alt="Song cover" class="song-item-cover" />
-                <div class="song-item-info">
-                  <p class="song-item-title">{{ song.title }}</p>
-                  <p class="song-item-artist">{{ song.artist }}</p>
-                </div>
-                <button class="play-btn" @click.stop="playSong(song)">
-                  <i class="fa-solid fa-play"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </a-drawer>
+  <SongDetailDrawer v-if="currentSong"
+    v-model:open="openSongDetail"
+    :current-song="currentSong"
+    :same-artist-songs="sameArtistSongs"
+    :suggested-songs="suggestedSongs"
+    :is-favorite="isFavorite"
+    :background-image="tmusicbackground2"
+    @toggle-favorite="toggleFavorite"
+    @select-song="selectSong"
+    @play-song="playSong"
+    @show-share-modal="showShareModal"
+    @toggle-right-drawer="toggleRightDrawer"
+  />
 
   <!-- Modal xác nhận logout -->
   <a-modal 
@@ -462,6 +371,10 @@
     :steps="helpSteps"
     @close="handleHelpModalClose"
   />
+  <ShareQRModal
+    v-model:open="shareModalVisible"
+    :song="currentSong"
+  />
 </template>
 
 <script setup>
@@ -474,6 +387,8 @@ import LyricWithComments from '@/components/client/LyricWithComments.vue'
 import HelpGuideModal from '@/components/client/HelpGuideModal.vue'
 import FavoriteModal from '@/components/client/FavoriteModal.vue'
 import FilterModal from '@/components/client/FilterModal.vue'
+import SongDetailDrawer from '@/components/client/SongDetailDrawer.vue'
+import ShareQRModal from '@/components/client/ShareQRModal.vue'
 import { Button, Drawer, Input } from 'ant-design-vue'
 import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
@@ -496,6 +411,8 @@ const originalPlaylist = ref([]);
 const favoriteStore = useFavoriteStore()
 const nextSongSignalStore = useNextSongSignalStore();
 const playerStore = usePlayerStore();
+
+const shareModalVisible = ref(false);
 
 const getSongsFromServer = async () => {
   try {
@@ -624,9 +541,17 @@ const suggestedSongs = ref([
   }
 ]);
 
+const playSong = (song) => {
+  selectSong(song);
+}
+
 const toggleSongDetail = () => {
   openSongDetail.value = !openSongDetail.value;
 };
+
+const showShareModal = () => {
+  shareModalVisible.value = true
+}
 
 const toggleFavorite = async (id) => {
   try {
@@ -1064,7 +989,6 @@ const confirmLogout = async () => {
   }
 };
 
-//Sang trang Khám phá
 const openExploreModal = () => {
   visibleExploreModal.value = true;
   visible.value = false; // Đóng drawer mobile nếu đang mở
@@ -1480,283 +1404,6 @@ const openExploreModal = () => {
 .song-detail-trigger:hover {
   transform: translateY(-3px);
   background: var(--secondary-color);
-}
-
-.song-detail-drawer .ant-drawer-content-wrapper {
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  overflow: hidden;
-}
-
-.song-detail-container {
-  display: flex;
-  height: 100%;
-  color: white;
-}
-
-/* Cột trái */
-.left-column {
-  flex: 1;
-  padding: 20px;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.song-detail-content {
-  text-align: center;
-}
-
-.song-cover-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.song-cover {
-  width: 200px;
-  height: 200px;
-  border-radius: 10px;
-  object-fit: cover;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.song-info {
-  margin-bottom: 20px;
-}
-
-.song-info h3 {
-  font-size: 1.5rem;
-  margin-bottom: 5px;
-  color: white;
-}
-
-.song-info .artist {
-  color: var(--accent-color, #64ffda);
-  font-size: 1.1rem;
-  margin-bottom: 10px;
-}
-
-.song-meta {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.song-actions {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.song-actions .ant-btn {
-  color: white;
-  font-size: 1.2rem;
-  border: none;
-  background: transparent;
-}
-
-.song-actions .ant-btn:hover {
-  color: var(--accent-color, #64ffda);
-  transform: scale(1.1);
-  background: transparent;
-}
-
-/* Cột phải */
-.right-column {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.song-lists {
-  height: 100%;
-}
-
-.song-list-section {
-  margin-bottom: 30px;
-}
-
-.section-title {
-  color: white;
-  font-size: 1.1rem;
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.section-title i {
-  color: var(--accent-color, #64ffda);
-}
-
-.song-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.song-item {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.song-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(5px);
-}
-
-.song-item.active {
-  background: var(--accent-color, #64ffda);
-  color: #1a1a2e;
-}
-
-.song-item-cover {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  object-fit: cover;
-  margin-right: 12px;
-}
-
-.song-item-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.song-item-title {
-  font-weight: 500;
-  margin: 0 0 2px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.song-item-duration,
-.song-item-artist {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.song-item.active .song-item-duration,
-.song-item.active .song-item-artist {
-  color: rgba(26, 26, 46, 0.7);
-}
-
-.play-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--accent-color, #64ffda);
-  border: none;
-  color: #1a1a2e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  opacity: 0;
-}
-
-.song-item:hover .play-btn {
-  opacity: 1;
-}
-
-.play-btn:hover {
-  transform: scale(1.1);
-}
-
-/* Animation khi mở drawer */
-.song-detail-drawer .ant-drawer-content {
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .song-detail-container {
-    flex-direction: column;
-  }
-  
-  .left-column {
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    flex: none;
-  }
-  
-  .song-cover {
-    width: 150px;
-    height: 150px;
-  }
-  
-  .song-info h3 {
-    font-size: 1.3rem;
-  }
-  
-  .right-column {
-    flex: 1;
-    max-height: 300px;
-  }
-}
-
-@media (max-width: 576px) {
-  .song-detail-container {
-    flex-direction: column;
-  }
-  
-  .left-column {
-    padding: 15px;
-  }
-  
-  .right-column {
-    padding: 15px;
-  }
-  
-  .song-cover {
-    width: 120px;
-    height: 120px;
-  }
-}
-
-/* Custom scrollbar cho cột phải */
-.right-column::-webkit-scrollbar {
-  width: 4px;
-}
-
-.right-column::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-}
-
-.right-column::-webkit-scrollbar-thumb {
-  background: var(--accent-color, #64ffda);
-  border-radius: 2px;
-}
-
-.right-column::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 255, 218, 0.8);
 }
 </style>
 

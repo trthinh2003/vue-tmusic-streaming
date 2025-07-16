@@ -60,11 +60,9 @@ const currentUser = ref({
 
 // const handleKaraokeToggle = (checked) => {
 //   console.log('Karaoke mode:', checked);
-//   // Tùy nhu cầu, có thể emit ra ngoài hoặc truyền cho LyricDisplay
 // };
 watch(() => props.karaokeMode, (newVal) => {
   // console.log('karaokeMode changed:', newVal);
-  // Gọi logic hiệu ứng karaoke tại đây
 });
 
 const handleSeek = (time) => {

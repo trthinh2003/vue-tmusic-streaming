@@ -74,6 +74,9 @@
               </div>
             </div>
           </div>
+          <div v-if="sameArtistSongs.length === 0" class="empty-state">
+            <p>Hiện chưa có bài hát nào khác thuộc cùng ca sĩ này.</p>
+          </div>
           <!-- Bài hát gợi ý -->
           <div class="song-list-section">
             <h4 class="section-title">
@@ -85,6 +88,7 @@
                 v-for="song in suggestedSongs" 
                 :key="song.id"
                 class="song-item"
+                :class="{ active: song.id === currentSong.id }"
                 @click="selectSong(song)"
               >
                 <img :src="song.cover" alt="Song cover" class="song-item-cover" />
@@ -96,6 +100,11 @@
                   <i class="fa-solid fa-play"></i>
                 </button>
               </div>
+              
+              <!-- Hiển thị khi không có bài hát gợi ý -->
+              <div v-if="suggestedSongs.length === 0" class="empty-state">
+                <p>Không có bài hát gợi ý</p>
+              </div>
             </div>
           </div>
         </div>
@@ -105,22 +114,26 @@
 </template>
 
 <script setup>
-import { toRefs } from 'vue'
+import { toRefs, onMounted, computed, ref } from 'vue'
 
 const props = defineProps({
   open: Boolean,
   currentSong: { type: Object, required: true, default: null },
   sameArtistSongs: { type: Array, required: true },
-  suggestedSongs: { type: Array, required: true },
+  suggestedSongs: { 
+    type: Array, 
+    default: () => []
+  },
   isFavorite: { type: Function, required: true },
   backgroundImage: String
 })
 const emit = defineEmits([
-  'update:open', // for v-model:open
+  'update:open',
   'toggle-favorite',
   'select-song',
   'play-song',
-  'toggle-right-drawer'
+  'toggle-right-drawer',
+  'show-share-modal'
 ])
 
 const { open, currentSong, sameArtistSongs, suggestedSongs, isFavorite, backgroundImage } = toRefs(props)
@@ -144,6 +157,10 @@ function toggleRightDrawer() {
 function showShareModal() {
   emit('show-share-modal')
 }
+
+onMounted(async() => {
+  
+})
 </script>
 
 <style scoped>
@@ -308,6 +325,20 @@ function showShareModal() {
 }
 .play-btn:hover {
   transform: scale(1.1);
+}
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.song-item-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  margin-right: 12px;
 }
 @media (max-width: 768px) {
   .song-detail-container {

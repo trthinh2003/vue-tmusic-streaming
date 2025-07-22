@@ -25,13 +25,13 @@
       <a-dropdown :trigger="['click']" placement="bottomRight">
         <a-avatar 
           :size="36" 
-          :src="adminLogo" 
+          :src="currentUser.avatar || adminLogo" 
           class="cursor-pointer"
         />
         
         <template #overlay>
           <a-menu>
-            <a-menu-item key="profile">
+            <a-menu-item key="profile" @click="openProfileModal">
               <i class="fa-solid fa-user me-2 text-white"></i>
               <span class="text-white">Hồ sơ</span>
             </a-menu-item>
@@ -211,7 +211,7 @@
           <div class="user-avatar">
             <a-avatar 
               :size="40" 
-              :src="adminLogo" 
+              :src="currentUser.avatar || adminLogo" 
               class="cursor-pointer"
             />
             <span class="username ms-2">{{ currentUser.username }}</span>
@@ -220,7 +220,7 @@
           
           <template #overlay>
             <a-menu>
-              <a-menu-item key="profile">
+              <a-menu-item key="profile" @click="openProfileModal">
                 <i class="fa-solid fa-user me-2 text-white"></i>
                 <span class="text-white">Hồ sơ</span>
               </a-menu-item>
@@ -375,37 +375,59 @@
     v-model:open="shareModalVisible"
     :song="currentSong"
   />
+  <ProfileModal
+    :open="showProfileModal"
+    @update:open="showProfileModal = $event"
+    @profile-updated="handleProfileUpdated"
+  />
 </template>
 
 <script setup>
 import { ref, onMounted, watch, computed, onBeforeUnmount  } from 'vue'
+
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
-import PlayListModal from '@/components/client/PlayListModal.vue'
-import ExploreModal from '@/components/client/ExploreModal.vue'
-import LyricWithComments from '@/components/client/LyricWithComments.vue'
-import HelpGuideModal from '@/components/client/HelpGuideModal.vue'
-import FavoriteModal from '@/components/client/FavoriteModal.vue'
-import FilterModal from '@/components/client/FilterModal.vue'
+import PlayListModal from '@/components/client/modals/PlayListModal.vue'
+import ExploreModal from '@/components/client/modals/ExploreModal.vue'
+import LyricWithComments from '@/components/client/lyrics/LyricWithComments.vue'
+import HelpGuideModal from '@/components/client/modals/HelpGuideModal.vue'
+import FavoriteModal from '@/components/client/modals/FavoriteModal.vue'
+import FilterModal from '@/components/client/modals/FilterModal.vue'
 import SongDetailDrawer from '@/components/client/SongDetailDrawer.vue'
-import ShareQRModal from '@/components/client/ShareQRModal.vue'
+import ShareQRModal from '@/components/client/modals/ShareQRModal.vue'
+import ProfileModal from '@/components/client/modals/ProfileModal.vue'
+
 import { Button, Drawer, Input } from 'ant-design-vue'
 import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getSongs, getRandomSongs, getSongByPlaylist } from '@/services/songService'
+import { getSongs, getRandomSongs, getSongByPlaylist, getSongByArtist } from '@/services/songService'
 import { getMyPlaylists } from '@/services/playlistService'
+import { getRecommendSongs } from '@/services/recommendService'
+
 import { useProfileStore } from '@/stores/useProfile.js'
 import { useFavoriteStore } from '@/stores/useFavoriteStore'
 import { useNextSongSignalStore } from '@/stores/nextSongSignalStore';
 import { usePlayerStore } from '@/stores/playerStore';
+
 import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
 import logoutImage from '@/assets/client/guide/logout_done.png';
 import guideImage1 from '@/assets/client/guide/guide.png';
 import guideImage2 from '@/assets/client/guide/guide.png';
 
 import adminLogo from '@/assets/img/admin-logo.png';
+
+const showProfileModal = ref(false);
+const openProfileModal = () => {
+  showProfileModal.value = true;
+};
+
+const handleProfileUpdated = (updatedUser) => {
+  console.log("Profile updated successfully:", updatedUser);
+  message.success('Hồ sơ đã được cập nhật!');
+  currentUser.value = useProfileStore().getProfile();
+};
 
 const originalPlaylist = ref([]);
 const favoriteStore = useFavoriteStore()
@@ -422,8 +444,9 @@ const getSongsFromServer = async () => {
     currentSong.value = songs.value[0];
     console.log('Songs loaded:', songs.value);
   } catch (error) {
-    console.error('Error loading songs:', error);
-    message.error('Không thể tải danh sách bài hát');
+    // console.error('Error loading songs:', error);
+    // message.error('Không thể tải danh sách bài hát');
+    // throw error;
   }
 }
 getSongsFromServer();
@@ -475,71 +498,50 @@ const handleFavoriteUpdate = (songId, isFavorite) => {
 }
 
 
-const sameArtistSongs = ref([
-  {
-    id: 2,
-    title: "Perfect",
-    artist: "Ed Sheeran",
-    genre: "Pop",
-    cover: "https://res.cloudinary.com/dny7pcxme/image/upload/v1747068970/TMusicStreaming/song/covers/TMusicStreaming/song/covers/84f6ecdd-22da-4064-9b53-caed41c61eac.jpg.webp",
-    audio: "https://res.cloudinary.com/dny7pcxme/video/upload/v1747637113/TMusicStreaming/song/TMusicStreaming/song/1ca09113-69ba-49a1-bee4-ee1d042a0c58.mp3.mp4",
-    lyric: "https://res.cloudinary.com/dny7pcxme/raw/upload/v1747637114/TMusicStreaming/song/lyrics/TMusicStreaming/song/lyrics/c8c7cf16-4f96-4839-b796-cc9d1e0e1e78.lrc",
-    background: "https://res.cloudinary.com/dny7pcxme/image/upload/v1747637091/TMusicStreaming/song/images/TMusicStreaming/song/images/67417117-1ff3-44bb-ba83-7f842c1eea63.jpg.jpg",
-    duration: "4:23"
-  },
-  {
-    id: 3,
-    title: "Thinking Out Loud",
-    artist: "Ed Sheeran",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "4:41"
-  },
-  {
-    id: 4,
-    title: "Photograph",
-    artist: "Ed Sheeran",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "4:18"
-  },
-  {
-    id: 5,
-    title: "Castle on the Hill",
-    artist: "Ed Sheeran",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "4:21"
+const sameArtistSongs = ref([]);
+const fetchSameArtistSongs = async (artistName) => {
+  if (!artistName) {
+    sameArtistSongs.value = [];
+    return;
   }
-]);
+  try {
+    const response = await getSongByArtist(artistName);
+    sameArtistSongs.value = response.data.data.filter(song => song.id !== currentSong.value.id);
+  } catch (error) {
+    console.error('Error fetching songs by artist:', error);
+    sameArtistSongs.value = [];
+  }
+};
 
-const suggestedSongs = ref([
-  {
-    id: 6,
-    title: "Blinding Lights",
-    artist: "The Weeknd",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "3:20"
-  },
-  {
-    id: 7,
-    title: "Watermelon Sugar",
-    artist: "Harry Styles",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "2:54"
-  },
-  {
-    id: 8,
-    title: "Levitating",
-    artist: "Dua Lipa",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "3:23"
-  },
-  {
-    id: 9,
-    title: "Good 4 U",
-    artist: "Olivia Rodrigo",
-    cover: "https://via.placeholder.com/50x50",
-    duration: "2:58"
+const suggestedSongs = ref([]);
+const fetchRecommendedSongs = async () => {
+  try {
+    const response = await getRecommendSongs(10) // Lấy 10 bài hát gợi ý
+    suggestedSongs.value = response.data.data || []
+  } catch (error) {
+    console.error('Error fetching recommended songs:', error)
+    suggestedSongs.value = []
   }
-]);
+}
+
+watch(() => openSongDetail.value, (newVal) => {
+  if (newVal && currentSong.value) {
+    fetchSameArtistSongs(currentSong.value.artist);
+    fetchRecommendedSongs();
+  } else {
+    sameArtistSongs.value = [];
+    suggestedSongs.value = [];
+  }
+});
+
+watch(currentSong, (newSong, oldSong) => {
+  if (openSongDetail.value && newSong && newSong.artist !== oldSong?.artist) {
+    fetchSameArtistSongs(newSong.artist);
+  }
+  if (openSongDetail.value && newSong) {
+    fetchRecommendedSongs();
+  }
+}, { deep: true });
 
 const playSong = (song) => {
   selectSong(song);
@@ -912,8 +914,8 @@ const fetchPlaylists = async () => {
     const response = await getMyPlaylists();
     playlists.value = response.data;
   } catch (error) {
-    console.error('Error fetching playlists:', error);
-    message.error('Không thể tải danh sách playlist');
+    // console.error('Error fetching playlists:', error);
+    // message.error('Không thể tải danh sách playlist');
   }
 };
 
@@ -955,6 +957,7 @@ onMounted(async () => {
   await fetchPlaylists()
   const favoriteStore = useFavoriteStore()
   await favoriteStore.fetchFavoriteIds()
+  await fetchRecommendedSongs()
 })
 
 onBeforeUnmount(() => {

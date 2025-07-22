@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { getProfile } from "@/services/authService";
 
 export const useProfileStore = defineStore("profile", {
     state: () => ({

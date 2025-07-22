@@ -39,8 +39,8 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { Icon } from '@iconify/vue';
-import LyricDisplay from './LyricDisplay.vue';
-import CommentSection from './CommentSection.vue';
+import LyricDisplay from '@/components/client/lyrics/LyricDisplay.vue';
+import CommentSection from '@/components/client/lyrics/CommentSection.vue';
 
 const props = defineProps({
   currentLyric: String,

@@ -92,7 +92,7 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { Icon } from '@iconify/vue';
-import DownloadModal from './DownloadModal.vue';
+import DownloadModal from '@/components/client/modals/DownloadModal.vue';
 import { toggleFavorite as toggleFavoriteAPI } from '@/services/favoriteService';
 import { historyService } from '@/services/historyService'
 import { useFavoriteStore } from '@/stores/useFavoriteStore'
@@ -163,8 +163,11 @@ const formatTime = (time) => {
 
 // Cập nhật tiến trình khi phát nhạc
 const updateProgress = () => {
+	if (!audioPlayer.value) return;
+	if (!audioPlayer.value.duration) return; 
+	
 	currentTime.value = audioPlayer.value.currentTime
-	progressPercentage.value = (currentTime.value / duration.value) * 100
+	progressPercentage.value = (currentTime.value / audioPlayer.value.duration) * 100
 	emit('timeupdate', currentTime.value)
 }
 
@@ -179,6 +182,7 @@ const seekAudio = (e) => {
 	const clickPosition = e.offsetX
 	const percentage = (clickPosition / progressBarWidth) * 100
 	progressPercentage.value = percentage
+	if (!audioPlayer.value) return;
 	audioPlayer.value.currentTime = (percentage / 100) * duration.value
 }
 
@@ -247,16 +251,19 @@ const handleDownload = async (downloadInfo) => {
 
 // Tua nhanh 10 giây
 const seekForward = () => {
+	if (!audioPlayer.value) return;
 	audioPlayer.value.currentTime += 10
 }
 
 // Tua lùi 10 giây
 const seekBackward = () => {
+	if (!audioPlayer.value) return;
 	audioPlayer.value.currentTime = Math.max(0, audioPlayer.value.currentTime - 10)
 }
 
 // Điều chỉnh âm lượng
 const changeVolume = () => {
+	if (!audioPlayer.value) return;
 	audioPlayer.value.volume = volume.value
 }
 
@@ -287,15 +294,24 @@ const handleSongEnd = () => {
 // Xử lý khi component được mount
 onMounted(() => {
 	if (audioPlayer.value) {
-		audioPlayer.value.volume = volume.value
+		audioPlayer.value.volume = volume.value;
+
+		audioPlayer.value.addEventListener('timeupdate', updateProgress);
+		audioPlayer.value.addEventListener('loadedmetadata', updateDuration);
+		audioPlayer.value.addEventListener('volumechange', updateVolume);
+		audioPlayer.value.addEventListener('ended', handleSongEnd);
 	}
 })
 
 // Dọn dẹp khi component unmount
 onUnmounted(() => {
 	if (audioPlayer.value) {
-		audioPlayer.value.pause()
-		audioPlayer.value = null
+		audioPlayer.value.pause();
+		audioPlayer.value.removeEventListener('timeupdate', updateProgress);
+		audioPlayer.value.removeEventListener('loadedmetadata', updateDuration);
+		audioPlayer.value.removeEventListener('volumechange', updateVolume);
+		audioPlayer.value.removeEventListener('ended', handleSongEnd);
+		audioPlayer.value = null;
 	}
 })
 

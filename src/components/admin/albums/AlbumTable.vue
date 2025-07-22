@@ -50,31 +50,108 @@
             </template>
         </template>
     </a-table>
+    
+    <AlbumModalEdit
+        :isModalEditVisible="isModalEditVisible"
+        :new-album="selectedAlbum"
+        :preview-image="previewImageEdit"
+        @close-modal="closeEditModal"
+        @submit-form="handleUpdateAlbum"
+        @handle-file-upload="handleFileUploadEdit"
+    />
 </template>
 
 <script setup>
 import { ref } from "vue";
+import { message } from 'ant-design-vue';
+import AlbumModalEdit from "@/components/admin/albums/AlbumModalEdit.vue";
+import { updateAlbum } from "@/services/albumService";
 
 const props = defineProps({
     albums: Array,
     columns: Array,
     loading: Boolean,
-	pagination: Object,
+    pagination: Object,
 })
+
 const emit = defineEmits([
     "update:pagination",
     "fetch-data",
-    "showEdit",
-    "showDetail",
+    "show-detail",
     "confirm-delete",
     "cancel-delete"
 ]);
+
+// Edit Modal States
+const isModalEditVisible = ref(false);
+const selectedAlbum = ref(null);
+const previewImageEdit = ref("");
+const editImageFile = ref(null);
 
 const handleTableChange = (pagination) => {
     emit("update:pagination", pagination);
     emit("fetch-data", pagination.current, pagination.pageSize);
 };
 
+const showEdit = (record) => {
+    selectedAlbum.value = { ...record };
+    previewImageEdit.value = record.imageUrl || "";
+    editImageFile.value = null;
+    isModalEditVisible.value = true;
+};
+
+const closeEditModal = () => {
+    isModalEditVisible.value = false;
+    selectedAlbum.value = null;
+    previewImageEdit.value = "";
+    editImageFile.value = null;
+};
+
+const handleFileUploadEdit = ({ file, preview }) => {
+    editImageFile.value = file;
+    previewImageEdit.value = preview;
+};
+
+const handleUpdateAlbum = async (formData) => {
+    try {
+        const updateData = new FormData();
+        updateData.append('Title', formData.title);
+        updateData.append('ArtistId', formData.artistIds);
+        
+        if (formData.releaseDate) {
+            updateData.append('ReleaseDate', formData.releaseDate.toISOString());
+        }
+        
+        if (editImageFile.value) {
+            updateData.append('Image', editImageFile.value);
+        }
+
+        const response = await updateAlbum(selectedAlbum.value.id, updateData);
+        
+        if (response.status === 200) {
+            message.success(response.data.message || 'Cập nhật album thành công!');
+            closeEditModal();
+            // Refresh data
+            emit("fetch-data", props.pagination.current, props.pagination.pageSize);
+        }
+    } catch (error) {
+        console.error('Error updating album:', error);
+        const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật album!';
+        message.error(errorMessage);
+    }
+};
+
+const showDetail = (record) => {
+    emit("show-detail", record);
+};
+
+const confirmDelete = (id) => {
+    emit("confirm-delete", id);
+};
+
+const cancelDelete = (id) => {
+    emit("cancel-delete", id);
+};
 </script>
 
 <style scoped src="@/assets/admin/css/table-custom.css"></style>

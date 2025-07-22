@@ -173,8 +173,8 @@ import SongsTab from '@/components/client/ComponentTabsExploreModal/SongsTab.vue
 import PlaylistTab from '@/components/client/ComponentTabsExploreModal/PlaylistTab.vue';
 import AlbumTab from '@/components/client/ComponentTabsExploreModal/AlbumTab.vue';
 import ArtistTab from '@/components/client/ComponentTabsExploreModal/ArtistTab.vue';
-import AddSongToPlaylistModal from '@/components/client/AddSongToPlaylistModal.vue';
-import DownloadModal from '@/components/client/DownloadModal.vue';
+import AddSongToPlaylistModal from '@/components/client/modals/AddSongToPlaylistModal.vue';
+import DownloadModal from '@/components/client/modals/DownloadModal.vue';
 import { useSongActions } from '@/composables/useSongActions';
 import { debounce } from 'lodash';
 import { 

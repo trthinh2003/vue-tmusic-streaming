@@ -12,6 +12,10 @@ export async function getSongById(id) {
     return await axiosInstance.get(`/songs/get-song-by-id/${id}`);
 }
 
+export async function getSongByArtist(artistName) {
+    return await axiosInstance.get(`/songs/by-artist/${artistName}`);
+}
+
 export async function getSharedSong(shareToken) {
     return await axiosInstance.get(`/songs/shared/${shareToken}`);
 }

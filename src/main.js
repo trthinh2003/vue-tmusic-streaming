@@ -32,7 +32,8 @@ import {
     AutoComplete,
     Checkbox,
     Divider,
-    Alert
+    Alert,
+    Radio
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -80,6 +81,7 @@ app.use(AutoComplete)
 app.use(Checkbox)
 app.use(Divider)
 app.use(Alert)
+app.use(Radio)
 app.use(formatDate)
 app.use(truncateWords)
 app.use({

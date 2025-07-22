@@ -16,6 +16,7 @@
     "ant-design-vue": "^4.2.6",
     "axios": "^1.8.4",
     "bootstrap": "^5.3.4",
+    "chart.js": "^4.5.0",
     "dayjs": "^1.11.13",
     "font-awesome": "^4.7.0",
     "jwt-decode": "^4.0.0",

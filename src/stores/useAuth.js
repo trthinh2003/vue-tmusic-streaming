@@ -8,7 +8,6 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
 
   const login = async (credentials) => {
-    // Thay thế bằng API call thực tế
     const response = await fakeApiLogin(credentials)
     
     user.value = response.user

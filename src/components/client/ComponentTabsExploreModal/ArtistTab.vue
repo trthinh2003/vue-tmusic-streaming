@@ -138,7 +138,7 @@ import {
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { getMyArtistsWithSongs, followArtist, unfollowArtist } from '@/services/artistService';
-import SongActionDropdown from '@/components/client/SongActionDropdown.vue';
+import SongActionDropdown from '@/components/client/dropdowns/SongActionDropdown.vue';
 import { useSearchFilterModalStore } from '@/stores/useSearchFilterModalStore';
 
 const props = defineProps({

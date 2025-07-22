@@ -88,7 +88,7 @@ import { ref, watch, onMounted } from 'vue';
 import { PlayCircleFilled, ArrowLeftOutlined } from '@ant-design/icons-vue';
 import { getAlbumWithSongs } from '@/services/albumService';
 import { message } from 'ant-design-vue';
-import SongActionDropdown from '@/components/client/SongActionDropdown.vue';
+import SongActionDropdown from '@/components/client/dropdowns/SongActionDropdown.vue';
 import { useSearchFilterModalStore } from '@/stores/useSearchFilterModalStore';
 
 const props = defineProps({

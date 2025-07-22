@@ -48,7 +48,7 @@
 
 <script setup>
 import { PlayCircleFilled, PauseCircleFilled } from '@ant-design/icons-vue';
-import SongActionDropdown from '@/components/client/SongActionDropdown.vue';
+import SongActionDropdown from '@/components/client/dropdowns/SongActionDropdown.vue';
 
 const props = defineProps({
   currentSong: Object,

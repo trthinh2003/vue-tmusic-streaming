@@ -113,7 +113,7 @@
         <div class="artist-cards">
           <div 
             class="artist-card" 
-            v-for="(artist, index) in suggestedArtists" 
+            v-for="(artist, index) in displaySuggestedArtists" 
             :key="'artist-' + index"
             @click="$emit('view-artist', artist)"
           >
@@ -142,12 +142,12 @@
         <div class="playlist-cards">
           <div 
             class="playlist-card" 
-            v-for="(playlist, index) in suggestedPlaylists" 
+            v-for="(playlist, index) in displaySuggestedPlaylists" 
             :key="'playlist-' + index"
             @click="$emit('view-playlist', playlist)"
           >
             <div class="playlist-cover">
-              <img :src="playlist.cover" :alt="playlist.name" />
+              <img :src="playlist.image" :alt="playlist.name" />
               <div class="playlist-play-overlay">
                 <play-circle-filled />
               </div>
@@ -166,17 +166,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { PlayCircleFilled, PauseCircleFilled } from '@ant-design/icons-vue'
-import SongActionDropdown from '@/components/client/SongActionDropdown.vue';
-import { getRecommendSongs } from '@/services/recommendService.js';
+import SongActionDropdown from '@/components/client/dropdowns/SongActionDropdown.vue';
+import { getRecommendSongs, getRecommendedArtists, getRecommendedPlaylists } from '@/services/recommendService.js';
 
 // Reactive data
 const recommendSongs = ref([]);
+const recommendedArtists = ref([]); 
+const recommendedPlaylists = ref([]);
 
 // Props
 const props = defineProps({
   currentSong: Object,
   isPlaying: Boolean,
-  // Optional prop for overriding suggested songs
   suggestedSongs: {
     type: Array,
     default: () => []
@@ -198,31 +199,17 @@ const props = defineProps({
       { id: 12, title: 'Người Lạ Ơi', artist: 'Superbrothers x Karik x Orange', cover: 'https://via.placeholder.com/150', releaseDate: '2024-01-12' },
       { id: 13, title: '3107-3', artist: 'W/n x Duongg x Nâu', cover: 'https://via.placeholder.com/150', releaseDate: '2024-01-10' }
     ]
-  },
-  suggestedArtists: {
-    type: Array,
-    default: () => [
-      { id: 1, name: 'Sơn Tùng M-TP', avatar: 'https://via.placeholder.com/150', followers: 5200000 },
-      { id: 2, name: 'Jack - J97', avatar: 'https://via.placeholder.com/150', followers: 4800000 },
-      { id: 3, name: 'ERIK', avatar: 'https://via.placeholder.com/150', followers: 2100000 },
-      { id: 4, name: 'Hương Ly', avatar: 'https://via.placeholder.com/150', followers: 1800000 }
-    ]
-  },
-  suggestedPlaylists: {
-    type: Array,
-    default: () => [
-      { id: 1, name: 'Top Hits Việt Nam', description: 'Những bài hát hot nhất hiện tại', cover: 'https://via.placeholder.com/150' },
-      { id: 2, name: 'Ballad Buồn', description: 'Những ca khúc ballad da diết', cover: 'https://via.placeholder.com/150' },
-      { id: 3, name: 'Chill Lofi', description: 'Thư giãn cùng lofi', cover: 'https://via.placeholder.com/150' }
-    ]
   }
 })
 
-// Computed property to handle suggested songs display
 const displaySuggestedSongs = computed(() => {
-  // If suggestedSongs prop is provided and not empty, use it
-  // Otherwise, use the fetched recommendSongs
   return props.suggestedSongs.length > 0 ? props.suggestedSongs : recommendSongs.value;
+})
+const displaySuggestedArtists = computed(() => {
+  return recommendedArtists.value.length > 0 ? recommendedArtists.value : [];
+})
+const displaySuggestedPlaylists = computed(() => {
+  return recommendedPlaylists.value.length > 0 ? recommendedPlaylists.value : [];
 })
 
 // Emits
@@ -261,12 +248,22 @@ const formatReleaseDate = (dateStr) => {
 
 onMounted(async() => {
   try {
+    // Fetch songs
     const songRecommendations = await getRecommendSongs(5);
-    console.log(songRecommendations.data.data);
     recommendSongs.value = songRecommendations.data.data;
-    console.log([...recommendSongs.value]);
+
+    const artistRecommendations = await getRecommendedArtists(4);
+    recommendedArtists.value = artistRecommendations.data.data;
+
+    const playlistRecommendations = await getRecommendedPlaylists(3);
+    recommendedPlaylists.value = playlistRecommendations.data.data;
+
+    console.log('Recommended Artists:', recommendedArtists.value);
+    console.log('Recommended Playlists:', recommendedPlaylists.value);
   } catch (error) {
-    console.error('Error fetching recommended songs:', error);
+    console.error('Error fetching recommendations:', error);
+    recommendedArtists.value = [];
+    recommendedPlaylists.value = [];
   }
 })
 </script>

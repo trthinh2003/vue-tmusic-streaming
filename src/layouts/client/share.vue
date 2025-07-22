@@ -181,7 +181,7 @@ import { message } from 'ant-design-vue'
 import { ExclamationCircleOutlined, LoginOutlined, HomeOutlined, LeftOutlined } from '@ant-design/icons-vue'
 import axiosInstance from '@/configs/axios'
 import { getSharedSong } from '@/services/songService'
-import LyricDisplay from '@/components/client/LyricDisplay.vue'
+import LyricDisplay from '@/components/client/lyrics/LyricDisplay.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -284,7 +284,7 @@ const checkAuthStatus = async () => {
       user.value = response.data.user
     }
   } catch (error) {
-    console.error('Auth check error:', error)
+    // console.error('Auth check error:', error)
     isAuthenticated.value = false
   }
 }

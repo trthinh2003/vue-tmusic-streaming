@@ -90,7 +90,7 @@ import { ref, toRefs, watch, onMounted } from 'vue';
 import { PlayCircleFilled, ArrowLeftOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { getPlaylistsPopular } from '@/services/playlistService';
-import SongActionDropdown from '@/components/client/SongActionDropdown.vue';
+import SongActionDropdown from '@/components/client/dropdowns/SongActionDropdown.vue';
 import { usePlaylistSignalStore } from '@/stores/playlistSignalStore';
 import { useSearchFilterModalStore } from '@/stores/useSearchFilterModalStore';
 

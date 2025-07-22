@@ -166,8 +166,8 @@ onMounted(async () => {
       selectAllGenres.value = true
     }
   } catch (error) {
-    console.error('Error fetching genres:', error)
-    message.error('Không thể tải danh sách thể loại')
+    // console.error('Error fetching genres:', error)
+    // message.error('Không thể tải danh sách thể loại')
   } finally {
     loadingGenres.value = false
   }

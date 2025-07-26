@@ -3,7 +3,7 @@ import axiosInstance from "@/configs/axios";
 import { useProfileStore } from "@/stores/useProfile";
 
 let refreshTokenInterval = null;
-const BE_URL = 'https://tmusic-streaming-net.onrender.com/api'
+const BE_URL = 'https://tmusic-streaming-net.onrender.com'
 
 export async function getProfile() {
   const profileStore = useProfileStore();

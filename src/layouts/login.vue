@@ -143,9 +143,7 @@ const nextGo = async (name) => {
     window.location.reload();
 };
 
-// Xử lý callback từ social auth nếu có
 onMounted(() => {
-    // Kiểm tra nếu đang ở callback route
     if (route.path === '/auth/callback') {
         const result = handleSocialCallback();
         if (result.success) {

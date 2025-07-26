@@ -1,4 +1,3 @@
-// authService.js - Updated version
 import axiosInstance from "@/configs/axios";
 import { useProfileStore } from "@/stores/useProfile";
 
@@ -64,68 +63,31 @@ export async function register(data) {
   return axiosInstance.post('/auth/register', data);
 }
 
+export async function handlePostLoginRedirect(userRole) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const intendedUrl = urlParams.get('returnUrl') || '/watch';
+  
+  window.history.replaceState({}, document.title, window.location.pathname);
+  
+  if (userRole === 'Admin') {
+    return '/admin/dashboards';
+  } else {
+    return intendedUrl === '/watch' ? '/watch' : intendedUrl;
+  }
+}
+
 // Social Login Functions
 export function loginWithGoogle() {
-  const backendUrl = BE_URL || 'http://localhost:5298';
-  const googleAuthUrl = `${backendUrl}/api/socialauth/google`;
+  const backendUrl = 'https://tmusic-streaming-net.onrender.com';
+  const frontendReturnUrl = 'https://tmusicstreaming.onrender.com/watch';
   
-  // Mở popup window cho Google OAuth
-  const popup = window.open(
-    googleAuthUrl,
-    'google-login',
-    'width=500,height=600,scrollbars=yes,resizable=yes,left=' + 
-    (window.screen.width / 2 - 250) + ',top=' + (window.screen.height / 2 - 300)
-  );
-
-  return new Promise((resolve, reject) => {
-    // Lắng nghe message từ popup
-    const messageListener = (event) => {
-      // Kiểm tra origin để bảo mật
-      if (event.origin !== backendUrl.replace('/api', '')) {
-        return;
-      }
-      
-      if (event.data.type === 'SOCIAL_AUTH_SUCCESS') {
-        window.removeEventListener('message', messageListener);
-        popup.close();
-        checkAuthStatus()
-          .then(resolve)
-          .catch(reject);
-      } else if (event.data.type === 'SOCIAL_AUTH_ERROR') {
-        window.removeEventListener('message', messageListener);
-        popup.close();
-        reject(new Error(event.data.message || 'Đăng nhập Google thất bại'));
-      }
-    };
-
-    window.addEventListener('message', messageListener);
-
-    // Lắng nghe khi popup đóng
-    const checkClosed = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(checkClosed);
-        window.removeEventListener('message', messageListener);
-        // Kiểm tra xem đăng nhập có thành công hay không
-        checkAuthStatus()
-          .then(resolve)
-          .catch(() => reject(new Error('Đăng nhập Google bị hủy')));
-      }
-    }, 1000);
-
-    // Timeout sau 5 phút
-    setTimeout(() => {
-      if (!popup.closed) {
-        popup.close();
-        clearInterval(checkClosed);
-        window.removeEventListener('message', messageListener);
-        reject(new Error('Đăng nhập Google bị timeout'));
-      }
-    }, 5 * 60 * 1000);
-  });
+  const googleAuthUrl = `${backendUrl}/api/socialauth/google?returnUrl=${encodeURIComponent(frontendReturnUrl)}`;
+  window.location.href = googleAuthUrl;
 }
 
 export function loginWithFacebook() {
-  const backendUrl = BE_URL || 'http://localhost:5298';
+  // const backendUrl = BE_URL || 'http://localhost:5298';
+  const backendUrl = 'http://localhost:5298';
   const facebookAuthUrl = `${backendUrl}/api/socialauth/facebook`;
   
   const popup = window.open(

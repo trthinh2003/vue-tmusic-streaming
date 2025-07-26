@@ -44,13 +44,27 @@
             <div class="social-login">
                 <p>Hoặc đăng nhập bằng</p>
                 <div class="social-icons">
-                    <button class="social-btn google">
+                    <button 
+                        class="social-btn google" 
+                        @click="handleSocialLogin('google')"
+                        :disabled="socialLoading"
+                    >
                         <i class="fab fa-google"></i>
+                        <span v-if="socialLoading === 'google'">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
                     </button>
-                    <button class="social-btn facebook">
+                    <button 
+                        class="social-btn facebook" 
+                        @click="handleSocialLogin('facebook')"
+                        :disabled="socialLoading"
+                    >
                         <i class="fab fa-facebook-f"></i>
+                        <span v-if="socialLoading === 'facebook'">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
                     </button>
-                    <button class="social-btn apple">
+                    <button class="social-btn apple" disabled>
                         <i class="fab fa-apple"></i>
                     </button>
                 </div>
@@ -64,12 +78,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
 import { message } from 'ant-design-vue';
-import { login } from '@/services/authService';
+import { login, loginWithGoogle, loginWithFacebook, handleSocialCallback, getProfile } from '@/services/authService';
 
 const schema = yup.object({
     email: yup.string().email("Vui lòng nhập đúng định dạng email.").required("Vui lòng nhập email."),
@@ -81,13 +95,15 @@ const { value: email } = useField('email');
 const { value: password } = useField('password');
 
 const loading = ref(false);
+const socialLoading = ref(null);
 const router = useRouter();
+const route = useRoute();
 
 const handleLogin = handleSubmit(async (values) => {
     try {
         loading.value = true;
         const role = await login(values);
-        await nextGo(role === 'User' ? 'client' : 'admin-dashboard');
+        await nextGo(role === 'User' ? 'client' : 'admin-dashboards');
     } catch (error) {
         console.error("Login error:", error);
         const errorMessage = error.response?.data?.message || "Đã xảy ra lỗi!";
@@ -97,12 +113,59 @@ const handleLogin = handleSubmit(async (values) => {
     }
 });
 
-const nextGo = async (name) => {
-  const hide = message.loading('Đang chuyển trang...', 5000);
-  await router.push({ name });
-  hide();
-  window.location.reload();
+const handleSocialLogin = async (platform) => {
+    try {
+        socialLoading.value = platform;
+        
+        let user;
+        if (platform === 'google') {
+            user = await loginWithGoogle();
+        } else if (platform === 'facebook') {
+            user = await loginWithFacebook();
+        }
+        
+        if (user) {
+            message.success('Đăng nhập thành công!');
+            await nextGo(user.role === 'User' ? 'client' : 'admin-dashboards');
+        }
+    } catch (error) {
+        console.error(`${platform} login error:`, error);
+        message.error(`Đăng nhập bằng ${platform} thất bại: ${error.message}`);
+    } finally {
+        socialLoading.value = null;
+    }
 };
+
+const nextGo = async (name) => {
+    const hide = message.loading('Đang chuyển trang...', 5000);
+    await router.push({ name });
+    hide();
+    window.location.reload();
+};
+
+// Xử lý callback từ social auth nếu có
+onMounted(() => {
+    // Kiểm tra nếu đang ở callback route
+    if (route.path === '/auth/callback') {
+        const result = handleSocialCallback();
+        if (result.success) {
+            message.success(result.message);
+            // Redirect về trang chính sau khi đăng nhập thành công
+            setTimeout(async () => {
+                try {
+                    const user = await getProfile();
+                    await nextGo(user.role === 'User' ? 'client' : 'admin-dashboards');
+                } catch (error) {
+                    console.error('Error getting profile after social callback:', error);
+                    router.push({ name: 'login' });
+                }
+            }, 1000);
+        } else {
+            message.error(result.message);
+            router.push({ name: 'login' });
+        }
+    }
+});
 </script>
 
 <style scoped src="@/assets/admin/css/login.css"></style>

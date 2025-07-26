@@ -28,6 +28,7 @@
 			:pagination="pagination"
             @update:pagination="pagination = $event"
 			@fetch-data="fetchSongs"
+			@song-updated="handleSongUpdated"
 		/>
 	</a-card>
 </template>
@@ -51,14 +52,16 @@ const pagination = ref({
 const loading = ref(false);
 const columns = ref([
 	{ title: 'STT', key: 'index', width: 60, fixed: 'left' },
-	{ title: 'Bài hát', dataIndex: 'title', key: 'title', width: 400 },
+	{ title: 'Bài hát', dataIndex: 'title', key: 'title', width: 300 },
 	{ title: 'Ảnh', dataIndex: 'cover', key: 'cover', align: 'center', width: 60 },
 	{ title: 'Nghệ sĩ', dataIndex: 'artist', key: 'artist', align: 'center', width: 150 },
 	{ title: 'Thể loại', dataIndex: 'genre', key: 'genre', width: 150 },
 	{ title: 'Năm phát hành', dataIndex: 'releaseDate', key: 'releaseDate', align: 'center', width: 120 },
 	{ title: 'Độ dài', dataIndex: 'duration', key: 'duration', align: 'center', width: 80 },
+	{ title: 'Phổ biến', key: 'isPopular', align: 'center', width: 100 },
 	{ title: 'Thao tác', key: 'action', fixed: 'right', align: 'center', className: 'ant-table-cell-action' },
 ]);
+
 const fetchSongs = (page = 1, pageSize = 5) => {
     if (isSearching.value) return;
     loading.value = true;
@@ -76,6 +79,7 @@ const fetchSongs = (page = 1, pageSize = 5) => {
     .catch(() => message.error("Không thể lấy dữ liệu"))
     .finally(() => (loading.value = false));
 };
+
 const handleSearch = () => {
     if (!searchQuery.value.trim()) {
         isSearching.value = false;
@@ -96,12 +100,22 @@ const handleSearch = () => {
 		};
 	})
 	.then(() => (isSearching.value = true))
-    .catch(() => {
+    .catch((error) => {
 		message.error("Tìm kiếm thất bại");
 		console.log(error)
 	})
     .finally(() => (loading.value = false));
 };
+
+const handleSongUpdated = () => {
+    // Refresh current page data after song popular status update
+    if (isSearching.value) {
+        handleSearch();
+    } else {
+        fetchSongs(pagination.value.current, pagination.value.pageSize);
+    }
+};
+
 onMounted(() => {
 	fetchSongs();
 })

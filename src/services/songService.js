@@ -32,6 +32,18 @@ export async function getSongByPlaylist(playlistId) {
     return await axiosInstance.get(`/songs/by-playlist/${playlistId}`);
 }
 
+export async function getSongsFromFavorites() {
+    return await axiosInstance.get(`/songs/favorites`);
+}
+
+export async function getPopularSongs(count = 5) {
+    return await axiosInstance.get(`/songs/popular?count=${count}`);
+}
+
+export async function getNewReleases(count = 5) {
+    return await axiosInstance.get(`/songs/new-releases?count=${count}`);
+}
+
 export const searchSongs = (page = 1, pageSize = 5, query) => {
     return axiosInstance.get(`/songs?page=${page}&pageSize=${pageSize}&query=${query}`);
 };
@@ -43,3 +55,9 @@ export async function createSong(formData) {
 export async function updateSong(id, formData) {
     return await axiosInstance.put(`/songs/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 }
+
+export const updateSongPopular = (songId, isPopular) => {
+    return axiosInstance.patch(`/songs/${songId}/popular`, {
+        isPopular: isPopular
+    });
+};

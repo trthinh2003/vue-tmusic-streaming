@@ -1,5 +1,5 @@
 <template>
-  <div class="lyric-container" :class="effectiveTheme">
+  <div class="lyric-container" :class="effectiveTheme" ref="lyricContainer">
     <div
       class="lyric-line"
       v-for="(line, index) in parsedLyrics"
@@ -9,13 +9,14 @@
         'pre-active': currentLineIndex === index - 1,
         'post-active': currentLineIndex === index + 1
       }"
+      :ref="el => { if (el && currentLineIndex === index) activeLineRef = el }"
       @click="handleLyricClick(line.time)"
     >
       <span class="lyric-text">
         <span
           class="lyric-part"
           v-for="(part, partIndex) in line.parts"
-          :key="partIndex"
+          :key="`${index}-${partIndex}`"
           :class="{
             'karaoke-fill': currentLineIndex === index && partIndex === currentPartIndex,
             'karaoke-done': currentLineIndex === index && partIndex < currentPartIndex,
@@ -31,9 +32,6 @@
       </div>
     </div>
   </div>
-  <div class="is-playing-btn" @click="togglePlayPause">
-    <i :class="[isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play']"></i>
-  </div>
 </template>
 
 <script setup>
@@ -45,7 +43,16 @@ const props = defineProps({
   currentTime: Number,
   theme: {
     type: String,
-    default: '' // neon-blue, neon-pink, neon-green
+    default: 'neon-blue',
+    validator: (value) => [
+      'neon-blue', 
+      'neon-pink', 
+      'neon-green',
+      'neon-purple',
+      'neon-orange',
+      'neon-red',
+      'default'
+    ].includes(value)
   },
   karaokeMode: Boolean
 });
@@ -54,27 +61,23 @@ const emit = defineEmits(['seek', 'toggle-play']);
 
 const playerStore = usePlayerStore();
 
-const isPlaying = computed({
-  get: () => playerStore.isPlaying,
-  set: (value) => playerStore.setPlayingState(value)
-});
 const parsedLyrics = ref([]);
 const currentLineIndex = ref(-1);
 const currentPartIndex = ref(0);
 const animationInProgress = ref(false);
+const lyricContainer = ref(null);
+const activeLineRef = ref(null);
+const userScrolling = ref(false);
+let scrollTimeout = null;
+let lastUpdateTime = 0; // Thêm debounce để tránh update quá thường xuyên
 
-
-const togglePlayPause = () => {
-  isPlaying.value = !isPlaying.value;
-};
-
-const handleLyricClick = (time) => {
+const handleLyricClick = (time) => {  
   emit('seek', time);
 };
 
 const effectiveTheme = computed(() => {
   if (props.karaokeMode) {
-    return 'neon-blue'; 
+    return 'neon-blue';
   }
   return props.theme || 'default';
 });
@@ -97,7 +100,6 @@ const parseLyrics = (lrcText) => {
     });
   });
 
-  // Gom các dòng trùng thời gian
   const merged = [];
   temp.forEach(({ time, text }) => {
     const last = merged[merged.length - 1];
@@ -124,6 +126,15 @@ const processLyricText = (text) => {
   }));
 };
 
+// Detect user scrolling
+const handleScroll = () => {
+  userScrolling.value = true;
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    userScrolling.value = false;
+  }, 2000);
+};
+
 watch(() => props.lyrics, (newVal) => {
   if (newVal) {
     parsedLyrics.value = parseLyrics(newVal);
@@ -133,7 +144,11 @@ watch(() => props.lyrics, (newVal) => {
 watch(() => props.currentTime, (time) => {
   if (!parsedLyrics.value.length) return;
 
-  // Tìm dòng có thời gian lớn nhất < currentTime
+  // Debounce để tránh update quá thường xuyên
+  const now = Date.now();
+  if (now - lastUpdateTime < 50) return; // Chỉ update tối đa 20 lần/giây
+  lastUpdateTime = now;
+
   let lineIndex = -1;
   for (let i = 0; i < parsedLyrics.value.length; i++) {
     if (parsedLyrics.value[i].time <= time) {
@@ -143,9 +158,10 @@ watch(() => props.currentTime, (time) => {
     }
   }
 
+  // Chỉ cập nhật khi thực sự thay đổi dòng
   if (lineIndex !== currentLineIndex.value) {
     currentLineIndex.value = lineIndex;
-    currentPartIndex.value = 0; // Reset từ khi chuyển dòng
+    currentPartIndex.value = 0;
     animationInProgress.value = true;
     setTimeout(() => {
       animationInProgress.value = false;
@@ -163,14 +179,12 @@ watch(() => props.currentTime, (time) => {
       : 4;
 
     const elapsedInLine = time - line.time;
-    const progress = Math.min(1, elapsedInLine / lineDuration);
+    const progress = Math.min(1, Math.max(0, elapsedInLine / lineDuration));
 
-    // Tính số từ hiển thị dựa trên tiến độ
     const totalParts = line.parts.filter(p => p.isWord).length;
-    let partsShown = Math.round(totalParts * progress);
+    let partsShown = Math.floor(totalParts * progress); // Dùng Math.floor thay vì Math.round
     partsShown = Math.max(0, Math.min(totalParts, partsShown));
 
-    // Tính currentPartIndex bao gồm cả khoảng trắng
     let wordCount = 0;
     let actualPartIndex = 0;
     for (let i = 0; i < line.parts.length; i++) {
@@ -179,20 +193,49 @@ watch(() => props.currentTime, (time) => {
       actualPartIndex = i + 1;
     }
 
-    currentPartIndex.value = actualPartIndex;
+    // Chỉ cập nhật khi có thay đổi thực sự
+    if (actualPartIndex !== currentPartIndex.value) {
+      currentPartIndex.value = actualPartIndex;
+    }
 
-    // Tự động cuộn đến dòng hiện tại
-    nextTick(() => {
-      const activeLine = document.querySelector('.lyric-line.active');
-      if (activeLine) {
-        activeLine.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    });
+    // Smart auto-scroll với debounce
+    if (!userScrolling.value) {
+      nextTick(() => {
+        if (activeLineRef.value && lyricContainer.value) {
+          const container = lyricContainer.value;
+          const activeLine = activeLineRef.value;
+          
+          const containerRect = container.getBoundingClientRect();
+          const activeLineRect = activeLine.getBoundingClientRect();
+          
+          const isAbove = activeLineRect.top < containerRect.top;
+          const isBelow = activeLineRect.bottom > containerRect.bottom;
+          
+          if (isAbove || isBelow) {
+            const containerScrollTop = container.scrollTop;
+            const activeLineOffsetTop = activeLine.offsetTop;
+            const containerHeight = container.clientHeight;
+            const activeLineHeight = activeLine.clientHeight;
+            
+            const targetScrollTop = activeLineOffsetTop - (containerHeight / 3) + (activeLineHeight / 2);
+            
+            container.scrollTo({
+              top: Math.max(0, targetScrollTop),
+              behavior: 'smooth'
+            });
+          }
+        }
+      });
+    }
   }
 });
+
+// Add scroll event listener when component mounts
+watch(lyricContainer, (newVal) => {
+  if (newVal) {
+    newVal.addEventListener('scroll', handleScroll, { passive: true });
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -207,6 +250,7 @@ watch(() => props.currentTime, (time) => {
   align-items: center;
   background-color: rgba(0, 0, 0, 0.85);
   perspective: 1000px;
+  scroll-behavior: smooth;
 }
 
 .lyric-line {
@@ -252,7 +296,7 @@ watch(() => props.currentTime, (time) => {
   display: inline-block;
   color: rgba(255, 255, 255, 0.9);
   padding-right: 1px;
-  transition: all 0.3s ease;
+  transition: color 0.3s ease, text-shadow 0.3s ease; /* Rút ngắn transition */
 }
 
 .lyric-translation {
@@ -274,15 +318,19 @@ watch(() => props.currentTime, (time) => {
 }
 
 .neon-blue .karaoke-done {
-  color: #4361ee;
+  color: #4361ee !important;
   text-shadow: 0 0 10px rgba(67, 97, 238, 0.8),
                0 0 20px rgba(67, 97, 238, 0.6),
                0 0 30px rgba(67, 97, 238, 0.4);
-  animation: pulsateBlue 1.5s infinite alternate;
+  animation: none; /* Tắt animation pulsate để tránh flicker */
 }
 
 .neon-blue .karaoke-fill {
-  animation: fillTextBlue 0.8s ease-out forwards;
+  color: #4361ee !important;
+  text-shadow: 0 0 10px rgba(67, 97, 238, 0.8),
+               0 0 20px rgba(67, 97, 238, 0.6),
+               0 0 30px rgba(67, 97, 238, 0.4);
+  animation: none; /* Tắt animation fill để tránh flicker */
 }
 
 /* Theme: Neon Pink */
@@ -292,15 +340,19 @@ watch(() => props.currentTime, (time) => {
 }
 
 .neon-pink .karaoke-done {
-  color: #ff3e96;
+  color: #ff3e96 !important;
   text-shadow: 0 0 10px rgba(255, 20, 147, 0.8),
                0 0 20px rgba(255, 20, 147, 0.6),
                0 0 30px rgba(255, 20, 147, 0.4);
-  animation: pulsatePink 1.5s infinite alternate;
+  animation: none;
 }
 
 .neon-pink .karaoke-fill {
-  animation: fillTextPink 0.8s ease-out forwards;
+  color: #ff3e96 !important;
+  text-shadow: 0 0 10px rgba(255, 20, 147, 0.8),
+               0 0 20px rgba(255, 20, 147, 0.6),
+               0 0 30px rgba(255, 20, 147, 0.4);
+  animation: none;
 }
 
 /* Theme: Neon Green */
@@ -310,125 +362,94 @@ watch(() => props.currentTime, (time) => {
 }
 
 .neon-green .karaoke-done {
-  color: #39ff14;
+  color: #39ff14 !important;
   text-shadow: 0 0 10px rgba(57, 255, 20, 0.8),
                0 0 20px rgba(57, 255, 20, 0.6),
                0 0 30px rgba(57, 255, 20, 0.4);
-  animation: pulsateGreen 1.5s infinite alternate;
+  animation: none;
 }
 
 .neon-green .karaoke-fill {
-  animation: fillTextGreen 0.8s ease-out forwards;
+  color: #39ff14 !important;
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.8),
+               0 0 20px rgba(57, 255, 20, 0.6),
+               0 0 30px rgba(57, 255, 20, 0.4);
+  animation: none;
+}
+
+/* Theme: Neon Purple */
+.neon-purple .lyric-line.active {
+  background: rgba(77, 25, 112, 0.2);
+  box-shadow: 0 0 15px rgba(157, 78, 221, 0.4);
+}
+
+.neon-purple .karaoke-done {
+  color: #9d4edd !important;
+  text-shadow: 0 0 10px rgba(157, 78, 221, 0.8),
+               0 0 20px rgba(157, 78, 221, 0.6),
+               0 0 30px rgba(157, 78, 221, 0.4);
+  animation: none;
+}
+
+.neon-purple .karaoke-fill {
+  color: #9d4edd !important;
+  text-shadow: 0 0 10px rgba(157, 78, 221, 0.8),
+               0 0 20px rgba(157, 78, 221, 0.6),
+               0 0 30px rgba(157, 78, 221, 0.4);
+  animation: none;
+}
+
+/* Theme: Neon Orange */
+.neon-orange .lyric-line.active {
+  background: rgba(112, 66, 25, 0.2);
+  box-shadow: 0 0 15px rgba(255, 158, 0, 0.4);
+}
+
+.neon-orange .karaoke-done {
+  color: #ff9e00 !important;
+  text-shadow: 0 0 10px rgba(255, 158, 0, 0.8),
+               0 0 20px rgba(255, 158, 0, 0.6),
+               0 0 30px rgba(255, 158, 0, 0.4);
+  animation: none;
+}
+
+.neon-orange .karaoke-fill {
+  color: #ff9e00 !important;
+  text-shadow: 0 0 10px rgba(255, 158, 0, 0.8),
+               0 0 20px rgba(255, 158, 0, 0.6),
+               0 0 30px rgba(255, 158, 0, 0.4);
+  animation: none;
+}
+
+/* Theme: Neon Red */
+.neon-red .lyric-line.active {
+  background: rgba(112, 25, 25, 0.2);
+  box-shadow: 0 0 15px rgba(255, 0, 84, 0.4);
+}
+
+.neon-red .karaoke-done {
+  color: #ff0054 !important;
+  text-shadow: 0 0 10px rgba(255, 0, 84, 0.8),
+               0 0 20px rgba(255, 0, 84, 0.6),
+               0 0 30px rgba(255, 0, 84, 0.4);
+  animation: none;
+}
+
+.neon-red .karaoke-fill {
+  color: #ff0054 !important;
+  text-shadow: 0 0 10px rgba(255, 0, 84, 0.8),
+               0 0 20px rgba(255, 0, 84, 0.6),
+               0 0 30px rgba(255, 0, 84, 0.4);
+  animation: none;
 }
 
 /* Hover effects */
 .lyric-line:hover {
   opacity: 0.8;
-  transform: scale(1.02);
 }
 
 .lyric-line.active:hover {
   transform: scale(1.07);
-}
-
-/* Animation keyframes */
-@keyframes pulsateBlue {
-  0% {
-    text-shadow: 0 0 10px rgba(67, 97, 238, 0.8),
-                 0 0 20px rgba(67, 97, 238, 0.6),
-                 0 0 30px rgba(67, 97, 238, 0.4);
-  }
-  100% {
-    text-shadow: 0 0 15px rgba(67, 97, 238, 0.9),
-                 0 0 25px rgba(67, 97, 238, 0.7),
-                 0 0 35px rgba(67, 97, 238, 0.5),
-                 0 0 45px rgba(67, 97, 238, 0.3);
-  }
-}
-
-@keyframes pulsatePink {
-  0% {
-    text-shadow: 0 0 10px rgba(255, 20, 147, 0.8),
-                 0 0 20px rgba(255, 20, 147, 0.6),
-                 0 0 30px rgba(255, 20, 147, 0.4);
-  }
-  100% {
-    text-shadow: 0 0 15px rgba(255, 20, 147, 0.9),
-                 0 0 25px rgba(255, 20, 147, 0.7),
-                 0 0 35px rgba(255, 20, 147, 0.5),
-                 0 0 45px rgba(255, 20, 147, 0.3);
-  }
-}
-
-@keyframes pulsateGreen {
-  0% {
-    text-shadow: 0 0 10px rgba(57, 255, 20, 0.8),
-                 0 0 20px rgba(57, 255, 20, 0.6),
-                 0 0 30px rgba(57, 255, 20, 0.4);
-  }
-  100% {
-    text-shadow: 0 0 15px rgba(57, 255, 20, 0.9),
-                 0 0 25px rgba(57, 255, 20, 0.7),
-                 0 0 35px rgba(57, 255, 20, 0.5),
-                 0 0 45px rgba(57, 255, 20, 0.3);
-  }
-}
-
-@keyframes fillTextBlue {
-  0% {
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: none;
-  }
-  100% {
-    color: #4361ee;
-    text-shadow: 0 0 10px rgba(67, 97, 238, 0.8),
-                 0 0 20px rgba(67, 97, 238, 0.6),
-                 0 0 30px rgba(67, 97, 238, 0.4);
-  }
-}
-
-@keyframes fillTextPink {
-  0% {
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: none;
-  }
-  100% {
-    color: #ff3e96;
-    text-shadow: 0 0 10px rgba(255, 20, 147, 0.8),
-                 0 0 20px rgba(255, 20, 147, 0.6),
-                 0 0 30px rgba(255, 20, 147, 0.4);
-  }
-}
-
-@keyframes fillTextGreen {
-  0% {
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: none;
-  }
-  100% {
-    color: #39ff14;
-    text-shadow: 0 0 10px rgba(57, 255, 20, 0.8),
-                 0 0 20px rgba(57, 255, 20, 0.6),
-                 0 0 30px rgba(57, 255, 20, 0.4);
-  }
-}
-
-.is-playing-btn {
-  position: fixed;
-  color: var(--accent-color);
-  bottom: 10px;
-  right: 10px;
-  z-index: 1000;
-  padding: 12px 16px;
-  border-radius: 50%;
-  background: rgba(148, 209, 224, 0.5);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.is-playing-btn:hover {
-  background: rgba(148, 209, 224, 0.8);
-  transform: scale(1.1);
 }
 
 /* Responsive design */

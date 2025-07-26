@@ -169,6 +169,7 @@
       </div>
 
       <playlist 
+        ref="playlistRef"
         :songs="filteredSongs" 
         :current-song="currentSong"
         :available-playlists="playlists"
@@ -177,6 +178,7 @@
         @change-playlist="handleChangePlaylist"
         @open-modal="showModal = true"
         @open-favorite-modal="handleOpenFavoriteModal"
+        @clear-favorites="handleClearFavorites"
         class="d-none d-sm-block"
       />
     </div>
@@ -364,6 +366,7 @@
   <FavoriteModal
     :open="showFavoriteModal"
     @update:open="showFavoriteModal = $event"
+    @play-favorites="handlePlayFavorites"
     @close="handleCloseFavoriteModal"
   />
   <HelpGuideModal 
@@ -402,7 +405,7 @@ import { Icon } from '@iconify/vue'
 import axiosInstance from '@/configs/axios'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getSongs, getRandomSongs, getSongByPlaylist, getSongByArtist } from '@/services/songService'
+import { getSongs, getRandomSongs, getSongByPlaylist, getSongsFromFavorites, getSongByArtist } from '@/services/songService'
 import { getMyPlaylists } from '@/services/playlistService'
 import { getRecommendSongs } from '@/services/recommendService'
 
@@ -438,7 +441,7 @@ const shareModalVisible = ref(false);
 
 const getSongsFromServer = async () => {
   try {
-    const response = await getRandomSongs(1, 21, 20);
+    const response = await getRandomSongs(1, 31, 30);
     originalPlaylist.value = response.data.data;
     songs.value = [...originalPlaylist.value];
     currentSong.value = songs.value[0];
@@ -600,7 +603,6 @@ const applyFilter = (appliedFilters) => {
       currentSong.value = songs.value[0];
     }
     visibleFilterModal.value = false;
-    message.success(`Đã lọc được ${songs.value.length} bài hát`);
   } catch (error) {
     console.error('Filter error:', error);
     message.error('Có lỗi khi áp dụng bộ lọc');
@@ -853,6 +855,7 @@ const handleHelpModalClose = () => {
   helpModalVisible.value = false;
 };
 
+const playlistRef = ref(null);
 // Modal Favorite
 const showFavoriteModal = ref(false);
 const handleOpenFavoriteModal = () => {
@@ -861,14 +864,35 @@ const handleOpenFavoriteModal = () => {
 const handleCloseFavoriteModal = () => {
   showFavoriteModal.value = false;
 };
+const handlePlayFavorites = async () => {
+  console.log('Đã emit nút "Phát bài hát yêu thích"');
+  try {
+    const res = await getSongsFromFavorites();
+    console.log('Danh sách bài hát yêu thích:', res.data.data);
+    originalPlaylist.value = res.data.data;
+    songs.value = [...originalPlaylist.value];
+    if (songs.value.length > 0) {
+      currentSong.value = songs.value[0];
+      isPlaying.value = true;
+    }
+    showFavoriteModal.value = false;
+    
+    if (playlistRef.value) {
+      playlistRef.value.handlePlayFavorites();
+    }
+  } catch (error) {
+    console.log('Không thể tải danh sách bài hát yêu thích', error);
+  }
+};
+
+const handleClearFavorites = () => {
+  getSongsFromServer();
+};
 
 // Modal Playlist
 const showModal = ref(false);
 const currentPlaylistId = ref(null);
 const playlists = ref([]);
-
-const selectedPlaylist = ref(null);
-const playlistSongs = ref([]);
 
 const handlePlaylistChange = (playlist) => {
   currentPlaylistId.value = playlist?.id || null;

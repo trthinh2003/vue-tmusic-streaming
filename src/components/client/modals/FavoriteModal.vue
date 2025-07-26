@@ -25,7 +25,18 @@
       <div class="song-list">
         <div class="header">
           <h3>Danh sách bài hát yêu thích</h3>
-          <span class="total-songs">{{ favoriteSongs.length }} bài hát</span>
+          <div class="header-actions">
+            <span class="total-songs">{{ favoriteSongs.length }} bài hát</span>
+            <a-button 
+              type="primary" 
+              @click="playAllFavorites"
+              class="play-all-btn"
+              :disabled="favoriteSongs.length === 0"
+            >
+              <template #icon><play-circle-outlined /></template>
+              Phát tất cả
+            </a-button>
+          </div>
         </div>
         
         <a-table
@@ -52,7 +63,7 @@
               </div>
             </template>
             <template v-else-if="column.key === 'duration'">
-              {{ formatDuration(record.duration) }}
+              {{ record.duration }}
             </template>
             <template v-else-if="column.key === 'actions'">
               <a-button 
@@ -62,13 +73,6 @@
                 class="action-btn"
               >
                 <template #icon><delete-outlined /></template>
-              </a-button>
-              <a-button 
-                type="text" 
-                @click="playSong(record)" 
-                class="action-btn play-btn"
-              >
-                <template #icon><play-circle-outlined /></template>
               </a-button>
             </template>
           </template>
@@ -95,7 +99,7 @@ const props = defineProps({
   open: Boolean
 });
 
-const emit = defineEmits(['update:open', 'close']);
+const emit = defineEmits(['update:open', 'close', 'play-favorites', 'clear-favorites']);
 
 const playerStore = usePlayerStore();
 const favoriteSongs = ref([]);
@@ -155,23 +159,9 @@ const removeFromFavorites = async (song) => {
   });
 };
 
-// Phát bài hát
-const playSong = (song) => {
-  playerStore.playSong({
-    id: song.songId || song.id,
-    title: song.songTitle || song.title,
-    artist: song.songArtist || song.artist,
-    image: song.songImage || song.image,
-    duration: song.duration
-  });
-};
-
-// Định dạng thời lượng
-const formatDuration = (seconds) => {
-  if (!seconds) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+const playAllFavorites = () => {
+  if (favoriteSongs.value.length === 0) return;
+  emit('play-favorites');
 };
 
 const handleCancel = () => {
@@ -196,6 +186,28 @@ onMounted(() => {
 
 <style scoped>
 /* Main modal styling */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.play-all-btn {
+  background: rgb(66, 185, 131);
+  border: none;
+  display: flex;
+  align-items: center;
+}
+
+.play-all-btn:hover {
+  background: rgba(66, 185, 131, 0.8);
+}
+
+.play-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .favorite-modal {
   border-radius: 12px;
   overflow: hidden;
@@ -344,14 +356,6 @@ onMounted(() => {
 .action-btn:hover {
   opacity: 1;
   transform: scale(1.1);
-}
-
-.play-btn {
-  color: #42b983 !important;
-}
-
-.play-btn:hover {
-  color: #369970 !important;
 }
 
 /* Scrollbar styling */

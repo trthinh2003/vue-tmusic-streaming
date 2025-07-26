@@ -19,6 +19,6 @@ const client = [
             requiresAuth: false,
             title: 'Chia sẻ bài hát'
         }
-    }
+    }    
 ]
 export default client;

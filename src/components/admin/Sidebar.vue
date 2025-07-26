@@ -15,8 +15,8 @@
                     <i class="fas" :class="openSections.dashboard ? 'fa-angle-up' : 'fa-angle-down'"></i>
                 </div>
                 <ul class="sidebar-menu" v-show="openSections.dashboard">
-                    <li class="menu-item" :class="{ 'active': $route.path === '/admin/dashboard' }">
-                        <router-link to="/admin/dashboard">
+                    <li class="menu-item" :class="{ 'active': $route.path === '/admin/dashboards' }">
+                        <router-link to="/admin/dashboards">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Bảng điều khiển</span>
                         </router-link>

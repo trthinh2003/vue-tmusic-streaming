@@ -3,18 +3,17 @@
         <router-link :to="{ name: 'admin-songs' }" class="back-link">
             <arrow-left-outlined /> Quay lại
         </router-link>
-        
+
         <h1 class="page-title">Thêm mới bài hát</h1>
-        
+
         <a-form layout="vertical" @submit.prevent="handleSubmit" class="song-form">
-            <!-- Section 1: Basic Info -->
             <a-card title="Thông tin cơ bản" class="form-section">
                 <a-row :gutter="24">
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Tiêu đề bài hát" name="title">
-                            <a-input v-model:value="songData.Title" 
-                                    placeholder="Nhập tiêu đề bài hát"
-                                    class="custom-input" />
+                            <a-input v-model:value="songData.Title"
+                                placeholder="Nhập tiêu đề bài hát"
+                                class="custom-input" />
                             <span class="text-danger" v-if="errorsServer.Title?.[0]">{{ errorsServer.Title?.[0] }}</span>
                         </a-form-item>
                     </a-col>
@@ -38,37 +37,36 @@
                 <a-row :gutter="24">
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Độ dài" name="duration">
-                            <a-input v-model:value="songData.Duration" 
-                                    placeholder="VD: 4:20, 3:50, 5:00,..."
-                                    class="custom-input" />
-                            <span class="text-danger" v-if="errorsServer.Duration?.[0]">{{ errorsServer.Duration?.[0] }}</span>                            
+                            <a-input v-model:value="songData.Duration"
+                                placeholder="VD: 4:20, 3:50, 5:00,..."
+                                class="custom-input" />
+                            <span class="text-danger" v-if="errorsServer.Duration?.[0]">{{ errorsServer.Duration?.[0] }}</span>
                         </a-form-item>
                     </a-col>
-                    
+
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Ngày phát hành" name="releaseDate">
-                            <a-date-picker v-model:value="songData.ReleaseDate" 
+                            <a-date-picker v-model:value="songData.ReleaseDate"
                                 placeholder="Nhập ngày phát hành"
-								format="DD/MM/YYYY"
+                                format="DD/MM/YYYY"
                                 style="width: 100%;" />
-                            <span class="text-danger" v-if="errorsServer.ReleaseDate?.[0]">{{ errorsServer.ReleaseDate?.[0] }}</span> 
+                            <span class="text-danger" v-if="errorsServer.ReleaseDate?.[0]">{{ errorsServer.ReleaseDate?.[0] }}</span>
                         </a-form-item>
                     </a-col>
                 </a-row>
-                
+
                 <a-row :gutter="24">
                     <a-col :span="24">
                         <a-form-item label="Mô tả ngắn" name="description">
-                            <a-textarea v-model:value="songData.Cour" 
-                                      placeholder="Nhập mô tả ngắn về bài hát"
-                                      :rows="3"
-                                      class="custom-textarea" />
+                            <a-textarea v-model:value="songData.Cour"
+                                    placeholder="Nhập mô tả ngắn về bài hát"
+                                    :rows="3"
+                                    class="custom-textarea" />
                         </a-form-item>
                     </a-col>
                 </a-row>
             </a-card>
-            
-            <!-- Section 2: Classification -->
+
             <a-card title="Phân loại" class="form-section">
                 <a-row :gutter="24">
                    <a-col :xs="24" :md="12">
@@ -82,10 +80,10 @@
                                 class="custom-select"
                                 allowClear
                             />
-                            <span class="text-danger" v-if="errorsServer.Album?.[0]">{{ errorsServer.Album?.[0] }}</span>                            
+                            <span class="text-danger" v-if="errorsServer.Album?.[0]">{{ errorsServer.Album?.[0] }}</span>
                         </a-form-item>
                     </a-col>
-                    
+
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Thể loại" name="genre">
                             <a-select
@@ -102,15 +100,14 @@
                 </a-row>
             </a-card>
 
-            <!-- Section 3: Lyrics Editor -->
             <a-card title="Lời bài hát" class="form-section">
                 <a-tabs v-model:activeKey="lyricsActiveTab">
                     <a-tab-pane key="editor" tab="Soạn thảo">
                         <a-form-item>
                             <div class="lyrics-editor-container">
-                                <textarea 
-                                    v-model="songData.LyricsText" 
-                                    class="lyrics-editor" 
+                                <textarea
+                                    v-model="songData.LyricsText"
+                                    class="lyrics-editor"
                                     placeholder="Nhập lời bài hát ở đây..."
                                     rows="10"
                                 ></textarea>
@@ -138,7 +135,7 @@
                             </div>
                         </a-form-item>
                     </a-tab-pane>
-                    
+
                     <a-tab-pane key="upload" tab="Tải lên file">
                         <a-form-item label="File lyric (LRC hoặc TXT)">
                             <div class="lyrics-upload-container">
@@ -173,27 +170,26 @@
                 </a-tabs>
                 <span class="text-danger" v-if="errorsServer.LyricsFile?.[0]">{{ errorsServer.LyricsFile?.[0] }}</span>
             </a-card>
-            
-            <!-- Section 4: Media Files -->
+
             <a-card title="Tệp đa phương tiện" class="form-section">
                 <a-row :gutter="24">
                     <a-col :xs="24" :md="8">
                         <a-form-item name="image">
                             <div class="upload-container">
-                                <a-upload 
-                                  v-model:file-list="imageFileList" 
-                                  list-type="picture-card" 
-                                  class="avatar-uploader"
-                                  :show-upload-list="false" 
-                                  :before-upload="beforeImageUpload" 
-                                  @change="handleImageUpload"
-								  accept="image/*"
-								>
-                                  <img v-if="previewImage" :src="previewImage" alt="Ảnh nền" class="avatar-preview" />
-                                  <div v-else class="upload-placeholder">
-                                    <plus-outlined class="text-dark"/>
-                                    <div class="ant-upload-text text-dark">Ảnh nền</div>
-                                  </div>
+                                <a-upload
+                                    v-model:file-list="imageFileList"
+                                    list-type="picture-card"
+                                    class="avatar-uploader"
+                                    :show-upload-list="false"
+                                    :before-upload="beforeImageUpload"
+                                    @change="handleImageUpload"
+                                    accept="image/*"
+                                >
+                                    <img v-if="previewImage" :src="previewImage" alt="Ảnh nền" class="avatar-preview" />
+                                    <div v-else class="upload-placeholder">
+                                        <plus-outlined class="text-dark"/>
+                                        <div class="ant-upload-text text-dark">Ảnh nền</div>
+                                    </div>
                                 </a-upload>
                             </div>
                             <span class="text-danger" v-if="errorsServer.Image?.[0]">{{ errorsServer.Image?.[0] }}</span>
@@ -203,26 +199,26 @@
 					<a-col :xs="24" :md="8">
                         <a-form-item name="cover">
                             <div class="upload-container">
-                                <a-upload 
-                                  v-model:file-list="coverFileList" 
-                                  list-type="picture-card" 
-                                  class="avatar-uploader"
-                                  :show-upload-list="false" 
-                                  :before-upload="beforeCoverUpload" 
-                                  @change="handleCoverUpload"
-								  accept="image/*"
-								>
-                                  <img v-if="previewCover" :src="previewCover" alt="Ảnh bài hát" class="avatar-preview" />
-                                  <div v-else class="upload-placeholder">
-                                    <plus-outlined class="text-dark"/>
-                                    <div class="ant-upload-text text-dark">Ảnh bài hát</div>
-                                  </div>
+                                <a-upload
+                                    v-model:file-list="coverFileList"
+                                    list-type="picture-card"
+                                    class="avatar-uploader"
+                                    :show-upload-list="false"
+                                    :before-upload="beforeCoverUpload"
+                                    @change="handleCoverUpload"
+                                    accept="image/*"
+                                >
+                                    <img v-if="previewCover" :src="previewCover" alt="Ảnh bài hát" class="avatar-preview" />
+                                    <div v-else class="upload-placeholder">
+                                        <plus-outlined class="text-dark"/>
+                                        <div class="ant-upload-text text-dark">Ảnh bài hát</div>
+                                    </div>
                                 </a-upload>
                             </div>
                             <span class="text-danger" v-if="errorsServer.Cover?.[0]">{{ errorsServer.Cover?.[0] }}</span>
                         </a-form-item>
                     </a-col>
-                    
+
                     <a-col :xs="24" :md="8" class="text-center">
                         <a-form-item name="songFile">
                             <div class="song-upload-container">
@@ -240,7 +236,7 @@
                                 </a-upload>
                                 <div v-if="songData.SongFile" class="file-info">
                                     <file-outlined />
-                                    <span class="file-name">{{ songData.SongFile }}</span>
+                                    <span class="file-name">{{ songData.SongFile.name }}</span>
                                     <check-circle-filled class="success-icon" />
                                 </div>
                                 <div v-else class="upload-hint">
@@ -252,8 +248,7 @@
                     </a-col>
                 </a-row>
             </a-card>
-            
-            <!-- Section 5: Additional Info -->
+
             <a-card title="Thông tin bổ sung" class="form-section">
                 <a-row :gutter="24">
                     <a-col :span="24">
@@ -270,8 +265,17 @@
                     </a-col>
                 </a-row>
             </a-card>
-            
-            <!-- Form Actions -->
+
+            <a-card title="Chạy thử bài hát" class="form-section">
+                <a-row :gutter="24">
+                    <a-col :span="24" class="text-center">
+                        <a-button @click="showPreview" class="preview-btn" style="background: linear-gradient(90deg, #00dbde 0%, #fc00ff 100%);">
+                            <eye-outlined /> Chạy thử bài hát
+                        </a-button>
+                    </a-col>
+                </a-row>
+            </a-card>
+
             <div class="form-actions">
                 <a-button type="default" @click="handleReset" class="reset-btn">
                     <redo-outlined /> Làm mới
@@ -282,13 +286,30 @@
             </div>
         </a-form>
     </div>
+
+    <a-drawer
+        :open="previewVisible"
+        placement="right"
+        width="450"
+        :title="songData.Title ? `Xem trước: ${songData.Title}` : 'Xem trước bài hát'"
+        @close="handlePreviewClose"
+        class="preview-drawer"
+    >
+        <SongPreview
+            :image="previewImage"
+            :cover="previewCover"
+            :audio="audioUrl"
+            :lyrics="songData.LyricsText"
+        />
+    </a-drawer>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { 
-    PlusOutlined, 
-    UploadOutlined, 
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import SongPreview from '@/components/admin/songs/SongPreview.vue';
+import {
+    PlusOutlined,
+    UploadOutlined,
     EditOutlined,
     FileOutlined,
     CheckCircleFilled,
@@ -300,7 +321,8 @@ import {
     ItalicOutlined,
     FieldTimeOutlined,
     ImportOutlined,
-	ExportOutlined 
+    ExportOutlined,
+    EyeOutlined
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
@@ -320,6 +342,9 @@ const lyricsPreview = ref('');
 const artistOptions = ref([]);
 const artistLoading = ref(false);
 const artistSearchTimeout = ref(null);
+
+const previewVisible = ref(false);
+const audioUrl = ref('');
 
 // Form data
 const songData = ref({
@@ -359,17 +384,17 @@ const handleArtistSearch = (searchValue) => {
     if (artistSearchTimeout.value) {
         clearTimeout(artistSearchTimeout.value);
     }
-    
+
     if (!searchValue || searchValue.length < 2) {
         artistOptions.value = [];
         return;
     }
-    
+
     artistSearchTimeout.value = setTimeout(async () => {
         try {
             artistLoading.value = true;
             const response = await searchArtists(1, 10, searchValue);
-            
+
             artistOptions.value = response.data.data.map(artist => ({
                 value: artist.name,
                 label: artist.name,
@@ -395,7 +420,7 @@ const formatLyrics = (type) => {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = songData.value.LyricsText.substring(start, end);
-    
+
     let formattedText = '';
     switch (type) {
         case 'bold':
@@ -410,12 +435,12 @@ const formatLyrics = (type) => {
         default:
             formattedText = selectedText;
     }
-    
-    songData.value.LyricsText = 
-        songData.value.LyricsText.substring(0, start) + 
-        formattedText + 
+
+    songData.value.LyricsText =
+        songData.value.LyricsText.substring(0, start) +
+        formattedText +
         songData.value.LyricsText.substring(end);
-    
+
     setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
@@ -431,7 +456,7 @@ const dummyRequest = ({ onSuccess }) => {
 const beforeLyricsUpload = (file) => {
     const isLyricsFile = ['.lrc', '.txt'].some(ext => file.name.toLowerCase().endsWith(ext));
     const isLt2M = file.size / 1024 / 1024 < 2;
-    
+
     if (!isLyricsFile) {
         message.error('Chỉ chấp nhận file .lrc hoặc .txt!');
         return false;
@@ -440,7 +465,7 @@ const beforeLyricsUpload = (file) => {
         message.error('File lyric phải nhỏ hơn 2MB!');
         return false;
     }
-    
+
     return true;
 };
 
@@ -449,22 +474,22 @@ const handleLyricsUpload = async (info) => {
         lyricsUploadSuccess.value = false;
         return;
     }
-    
+
     if (info.file.status === 'done') {
         try {
             const file = info.file.originFileObj;
-            
+
             if (!file || !(file instanceof Blob)) {
                 throw new Error('File không hợp lệ');
             }
-            
+
             lyricsFile.value = file;
             songData.value.LyricsFile = file.name;
-            
+
             const fileContent = await readFileAsText(file); // **Đọc nội dung để preview (không lưu vào songData)**
             lyricsPreview.value = fileContent.split('\n').slice(0, 50).join('\n');
             lyricsUploadSuccess.value = true;
-            
+
             if (lyricsActiveTab.value === 'editor') {
                 songData.value.LyricsText = fileContent;
                 message.info('Đã nhập nội dung lyric từ file');
@@ -483,7 +508,7 @@ const readFileAsText = (file) => {
             const reader = new FileReader();
             reader.onload = (event) => resolve(event.target.result);
             reader.onerror = (error) => reject(error);
-            
+
             // ****Kiểm tra lại đối tượng file trước khi đọc*****
             if (file instanceof Blob) {
                 reader.readAsText(file);
@@ -503,20 +528,20 @@ const importLyricsFile = () => {
     fileInput.onchange = async (e) => {
         if (e.target.files.length > 0) {
             const file = e.target.files[0];
-            
+
             try {
                 if (!(file instanceof Blob)) {
                     throw new Error('File không hợp lệ');
                 }
-                
+
                 lyricsFile.value = file; // Lưu file gốc
                 songData.value.LyricsFile = file.name;
-                
+
                 const fileContent = await readFileAsText(file);
                 songData.value.LyricsText = fileContent;
                 lyricsPreview.value = fileContent.split('\n').slice(0, 50).join('\n');
                 lyricsUploadSuccess.value = true;
-                
+
                 message.success('Đã nhập nội dung lyric từ file');
             } catch (error) {
                 console.error('Error reading file:', error);
@@ -534,34 +559,34 @@ const exportLyricsFile = (format = 'txt') => {
         message.warning('Không có nội dung lyric để xuất');
         return;
     }
-    
+
     try {
         let content = songData.value.LyricsText;
         let fileType = 'text/plain';
         let extension = '.txt';
-        
+
         if (format === 'lrc') {
             extension = '.lrc';
         }
-        
+
         const blob = new Blob([content], { type: fileType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        
-        const fileName = songData.value.Title 
-            ? `${songData.value.Title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_lyrics${extension}` 
+
+        const fileName = songData.value.Title
+            ? `${songData.value.Title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_lyrics${extension}`
             : `lyrics${extension}`;
         a.download = fileName;
-        
+
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }, 100);
-        
+
         message.success(`Đã xuất file lyric (${format.toUpperCase()}) thành công`);
     } catch (error) {
         console.error('Lỗi khi xuất file lyric:', error);
@@ -575,24 +600,42 @@ const createLrcFileFromText = (lyricsText, songTitle = 'Untitled') => {
         throw new Error('Invalid lyrics text');
     }
     try {
-        const safeTitle = songTitle 
+        const safeTitle = songTitle
             ? songTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()
             : 'untitled';
         const fileName = `${safeTitle}_lyrics.lrc`;
-        const lrcBlob = new Blob([lyricsText], { 
-            type: 'text/plain' 
+        const lrcBlob = new Blob([lyricsText], {
+            type: 'text/plain'
         });
         Object.defineProperty(lrcBlob, 'name', {
             value: fileName,
             writable: false
         });
-        
+
         return lrcBlob;
     } catch (error) {
         console.error('Error creating LRC blob:', error);
         throw error;
     }
 };
+
+const showPreview = () => {
+    if (!songData.value.SongFile || !songData.value.LyricsText) {
+        message.warning('Vui lòng tải lên file nhạc và lyric trước khi xem trước');
+        return;
+    }
+    audioUrl.value = URL.createObjectURL(songData.value.SongFile);
+    previewVisible.value = true;
+};
+
+const handlePreviewClose = () => {
+    previewVisible.value = false;
+    if (audioUrl.value) {
+        URL.revokeObjectURL(audioUrl.value);
+        audioUrl.value = '';
+    }
+};
+
 
 onMounted(async () => {
     try {
@@ -604,7 +647,7 @@ onMounted(async () => {
                 value: album.id,
                 label: album.title
             }))
-        ];     
+        ];
 
         const genreRes = await getGenres();
         genres.value = genreRes.data.map(genre => ({
@@ -627,17 +670,17 @@ const beforeImageUpload = () => {
 
 const handleImageUpload = (info) => {
     const file = info.file.originFileObj || info.file;
-    
+
     if (!file) {
         console.error('No file found in upload info');
         return;
     }
-    
+
     if (!(file instanceof Blob)) {
         console.error('Uploaded file is not a Blob or File object');
         return;
     }
-    
+
     try {
         previewImage.value = URL.createObjectURL(file);
         songData.value.Image = file;
@@ -653,15 +696,15 @@ const beforeCoverUpload = () => {
 
 const handleCoverUpload = (info) => {
     const file = info.file.originFileObj || info.file;
-    
+
     if (!file) {
         console.error('No file found in upload info');
         return;
     }
-    
+
     try {
         previewCover.value = URL.createObjectURL(file);
-        songData.value.Cover = file; 
+        songData.value.Cover = file;
     } catch (error) {
         console.error('Error creating object URL:', error);
         message.error('Không thể xử lý file ảnh bìa');
@@ -671,29 +714,38 @@ const handleCoverUpload = (info) => {
 const beforeSongUpload = (file) => {
     const isAudio = file.type.startsWith('audio/');
     const isLt50M = file.size / 1024 / 1024 < 50;
-    
+
     if (!isAudio) {
         message.error('Bạn chỉ có thể tải lên file nhạc!');
     }
     if (!isLt50M) {
         message.error('File nhạc phải nhỏ hơn 50MB!');
     }
-    
+
     return isAudio && isLt50M;
 };
 
 const handleSongUpload = (info) => {
     const file = info.file.originFileObj || info.file;
-    
+
     if (!file) {
         console.error('No file found in upload info');
         return;
     }
-    
+
     songData.value.SongFile = file;
 };
 
-console.log(songData.value);
+watch(() => songData.value.SongFile, (newFile, oldFile) => {
+  if (oldFile && audioUrl.value) {
+    URL.revokeObjectURL(audioUrl.value); 
+  }
+  if (newFile) {
+    audioUrl.value = URL.createObjectURL(newFile);
+  } else {
+    audioUrl.value = '';
+  }
+}, { immediate: true });
 
 
 const handleSubmit = async () => {
@@ -707,10 +759,10 @@ const handleSubmit = async () => {
         formData.append('ReleaseDate', dayjs(songData.value.ReleaseDate).format('YYYY-MM-DD') == 'Invalid Date' ? '' : dayjs(songData.value.ReleaseDate).format('YYYY-MM-DD'));
         if (songData.value.Albums && songData.value.Albums !== null && songData.value.Albums !== '') {
             formData.append('Album', songData.value.Albums.toString());
-        }        
+        }
         formData.append('cour', songData.value.Cour);
         formData.append('Tags', JSON.stringify(songData.value.Tags));
-        
+
         if (songData.value.Image) {
             formData.append('Image', songData.value.Image);
         }
@@ -728,14 +780,14 @@ const handleSubmit = async () => {
             // Nếu có text lyric nhưng chưa có file, tự động tạo file .lrc
             try {
                 const lrcBlob = createLrcFileFromText(songData.value.LyricsText, songData.value.Title);
-                formData.append('LyricsFile', lrcBlob, `${safeTitle}_lyrics.lrc`);
+                formData.append('LyricsFile', lrcBlob, lrcBlob.name); // Use lrcBlob.name for filename
             } catch (error) {
                 console.error('Error creating LRC file:', error);
                 // Fallback: gửi text thuần túy nếu không tạo được file
                 formData.append('LyricsText', songData.value.LyricsText);
             }
         }
-        
+
         console.log([...formData.entries()]);
         try {
             const response = await createSong(formData);
@@ -746,8 +798,8 @@ const handleSubmit = async () => {
         } catch (error) {
             if (error.response?.status === 400) {
                 errorsServer.value = { ...error.response.data.errors };
-                console.log('Validation errors:', errorsServer.value); 
-                console.log(errorsServer.value.Title[0]);
+                console.log('Validation errors:', errorsServer.value);
+                // console.log(errorsServer.value.Title[0]);
             }
         }
     } catch (error) {
@@ -761,30 +813,33 @@ const handleSubmit = async () => {
 const handleReset = () => {
     songData.value = {
         Title: '',
-        Artist: undefined,
-        Duration: undefined,
+        Artist: '',
+        Duration: '',
+        ReleaseDate: null,
         Genres: [],
-        Albums: undefined,
+        Albums: '',
         Cour: '',
         Image: null,
         Cover: null,
         SongFile: null,
         Tags: [],
         LyricsText: '',
-        LyricsFile: ''
+        LyricsFile: '',
+        LyricsFileContent: ''
     };
-    lyricsFile.value = null;
-    imageFileList.value = [];
-    coverFileList.value = [];
-    songFileList.value = [];
-    lyricsFileList.value = [];
     previewImage.value = '';
     previewCover.value = '';
+    audioUrl.value = '';
+    lyricsFileList.value = [];
+    songFileList.value = [];
+    imageFileList.value = [];
+    coverFileList.value = [];
+    lyricsFile.value = null;
     lyricsPreview.value = '';
     lyricsUploadSuccess.value = false;
+    errorsServer.value = {}; 
 };
 
-//Giải phóng vùng nhớ để tránh Memory Leak
 onUnmounted(() => {
     if (previewImage.value) {
         URL.revokeObjectURL(previewImage.value);
@@ -792,10 +847,26 @@ onUnmounted(() => {
     if (previewCover.value) {
         URL.revokeObjectURL(previewCover.value);
     }
-    if (artistSearchTimeout.value) {
-        clearTimeout(artistSearchTimeout.value);
+    if (audioUrl.value) {
+        URL.revokeObjectURL(audioUrl.value);
     }
 });
 </script>
 
 <style scoped src="@/assets/admin/css/song-crud.css"></style>
+<style scoped>
+.preview-btn {
+    color: #f6f7ff;
+}
+.preview-btn:hover {
+    color: #e8e4ec;
+}
+</style>
+<style>
+.preview-drawer .ant-drawer-body {
+    padding: 0;
+}
+.preview-drawer .ant-drawer-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>

@@ -21,6 +21,16 @@
                     : new Date(record.releaseDate).getFullYear()
                 }}
 			</template>
+			<template v-if="column.key === 'isPopular'">
+				<a-checkbox 
+					:checked="record.isPopular" 
+					@change="(e) => handlePopularChange(record.id, e.target.checked)"
+					:loading="loadingPopular[record.id]"
+				>
+					<span v-if="record.isPopular" style="color: #52c41a; font-weight: bold;">Popular</span>
+					<span v-else style="color: #8c8c8c;">Normal</span>
+				</a-checkbox>
+			</template>
 			<template v-if="column.key === 'action'">
 				<div class="action-buttons d-flex justify-content-center align-items-center gap-2 flex-wrap">
 					<a-tooltip title="Chỉnh sửa">
@@ -46,21 +56,53 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
+import { message } from 'ant-design-vue';
+import { updateSongPopular } from '@/services/songService';
 
 const props = defineProps({
     songs: Array,
     columns: Array,
     loading: Boolean,
-		pagination: Object,
+    pagination: Object,
 })
 
 const emit = defineEmits([
     "update:pagination",
     "fetch-data",
+    "song-updated"
 ]);
+
+const loadingPopular = ref({});
 
 const handleTableChange = (pagination) => {
     emit("update:pagination", pagination);
     emit("fetch-data", pagination.current, pagination.pageSize);
+};
+
+const handlePopularChange = async (songId, isPopular) => {
+    try {
+        loadingPopular.value[songId] = true;
+        await updateSongPopular(songId, isPopular);
+        message.success(isPopular ? 'Đã đánh dấu bài hát là Phổ biến!' : 'Đã bỏ đánh dấu Phổ biến!');
+        emit("song-updated");
+    } catch (error) {
+        console.error('Error updating popular status:', error);
+        message.error('Cập nhật trạng thái Phổ biến thất bại!');
+        const songIndex = props.songs.findIndex(s => s.id === songId);
+        if (songIndex !== -1) {
+            props.songs[songIndex].isPopular = !isPopular;
+        }
+    } finally {
+        loadingPopular.value[songId] = false;
+    }
+};
+
+const confirmDelete = (id) => {
+    console.log('Delete song:', id);
+};
+
+const cancelDelete = (id) => {
+    console.log('Cancel delete:', id);
 };
 </script>

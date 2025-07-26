@@ -33,8 +33,8 @@
                     <a-col :xs="24" :md="12">
                         <a-form-item label="Độ dài" name="duration">
                             <a-input v-model:value="songData.Duration" 
-                                    placeholder="VD: 4:20, 3:50, 5:00,..."
-                                    class="custom-input" />
+                                placeholder="VD: 4:20, 3:50, 5:00,..."
+                                class="custom-input" />
                             <span class="text-danger" v-if="errorsServer.Duration?.[0]">{{ errorsServer.Duration?.[0] }}</span>                            
                         </a-form-item>
                     </a-col>
@@ -54,9 +54,9 @@
                     <a-col :span="24">
                         <a-form-item label="Mô tả ngắn" name="description">
                             <a-textarea v-model:value="songData.Cour" 
-                                      placeholder="Nhập mô tả ngắn về bài hát"
-                                      :rows="3"
-                                      class="custom-textarea" />
+                                placeholder="Nhập mô tả ngắn về bài hát"
+                                :rows="3"
+                                class="custom-textarea" />
                         </a-form-item>
                     </a-col>
                 </a-row>
@@ -277,6 +277,16 @@
                     </a-col>
                 </a-row>
             </a-card>
+
+            <a-card title="Chạy thử bài hát" class="form-section">
+                <a-row :gutter="24">
+                    <a-col :span="24" class="text-center">
+                        <a-button @click="showPreview" class="preview-btn" style="background: linear-gradient(90deg, #00dbde 0%, #fc00ff 100%);">
+                            <eye-outlined /> Chạy thử bài hát
+                        </a-button>
+                    </a-col>
+                </a-row>
+            </a-card>
             
             <!-- Form Actions -->
             <div class="form-actions">
@@ -289,10 +299,27 @@
             </div>
         </a-form>
     </div>
+
+    <a-drawer
+        :open="previewVisible"
+        placement="right"
+        width="450"
+        :title="songData.Title ? `Xem trước: ${songData.Title}` : 'Xem trước bài hát'"
+        @close="handlePreviewClose"
+        class="preview-drawer"
+    >
+        <SongPreview
+            :image="previewImage"
+            :cover="previewCover"
+            :audio="audioUrl"
+            :lyrics="songData.LyricsText"
+        />
+    </a-drawer>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import SongPreview from '@/components/admin/songs/SongPreview.vue';
 import axios from 'axios';
 import { 
     PlusOutlined, 
@@ -328,6 +355,9 @@ const lyricsActiveTab = ref('editor');
 const lyricsUploadSuccess = ref(false);
 const lyricsPreview = ref('');
 const loadingLyric = ref(false);
+
+const previewVisible = ref(false);
+const audioUrl = ref('');
 
 // Form data
 const songData = ref({
@@ -681,6 +711,39 @@ const exportLyricsFile = (format = 'txt') => {
     }
 };
 
+
+const showPreview = () => {
+    if (!songData.value.SongFile || !songData.value.LyricsText) {
+        message.warning('Vui lòng tải lên file nhạc và lyric trước khi xem trước');
+        return;
+    }
+    let currentAudioSrc = '';
+    // Xử lý file audio
+    if (songData.value.SongFile instanceof File || songData.value.SongFile instanceof Blob) {
+        currentAudioSrc = URL.createObjectURL(songData.value.SongFile);
+        console.log("Using Blob URL for audio preview:", currentAudioSrc);
+    } 
+    else if (typeof songData.value.SongFile === 'string' && songData.value.SongFile.startsWith('http')) {
+        currentAudioSrc = songData.value.SongFile;
+        console.log("Using existing Cloudinary URL for audio preview:", currentAudioSrc);
+    } else {
+        message.error('File nhạc không hợp lệ để xem trước.');
+        console.error('Invalid songData.value.SongFile for preview:', songData.value.SongFile);
+        return;
+    }
+    
+    audioUrl.value = currentAudioSrc;
+    previewVisible.value = true;
+};
+
+const handlePreviewClose = () => {
+    previewVisible.value = false;
+    if (audioUrl.value && audioUrl.value.startsWith('blob:')) {
+        URL.revokeObjectURL(audioUrl.value);
+        audioUrl.value = '';
+    }
+};
+
 onMounted(async () => {
     try {
         const albumRes = await getAlbums();
@@ -874,3 +937,19 @@ onUnmounted(() => {
 </script>
 
 <style scoped src="@/assets/admin/css/song-crud.css"></style>
+<style scoped>
+.preview-btn {
+    color: #f6f7ff;
+}
+.preview-btn:hover {
+    color: #e8e4ec;
+}
+</style>
+<style>
+.preview-drawer .ant-drawer-body {
+    padding: 0;
+}
+.preview-drawer .ant-drawer-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>

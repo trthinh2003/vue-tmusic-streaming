@@ -7,9 +7,9 @@ const admin = [
     meta: { requiresAuth: true, roles: "Admin" }, // Chỉ cho phép admin truy cập
     children: [
       {
-        path: "/admin/dashboard",
-        name: "admin-dashboard",
-        component: () => import("@/pages/admin/dashboard/index.vue"),
+        path: "/admin/dashboards",
+        name: "admin-dashboards",
+        component: () => import("@/pages/admin/dashboards/index.vue"),
         meta: { title: "Dashboard", requiresAuth: true, roles: "Admin" },
       },
       {

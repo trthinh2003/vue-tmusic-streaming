@@ -1,7 +1,7 @@
 <template>
   <div class="playlist mt-4">
     <div class="playlist-header">
-      <h2>Playlist</h2>
+      <h2>Danh sách nhạc</h2>
       <div class="actions">
         <!-- Nút Playlist với tooltip -->
         <a-tooltip title="Quản lý Playlist" placement="top">
@@ -34,22 +34,24 @@
       </div>
     </div>
     
-    <div v-if="currentPlaylist && currentPlaylistId" class="current-playlist-info">
+    <div v-if="(currentPlaylist && currentPlaylistId) || currentFavoriteList" class="current-playlist-info">
       <div class="playlist-details">
-        <span class="playlist-name">{{ currentPlaylist.name }}</span>
+        <span class="playlist-name">
+          {{ currentPlaylistName || currentPlaylist?.name || 'Danh sách nhạc' }}
+        </span>
         <span class="song-count">{{ filteredSongs.length }} bài hát</span>
       </div>
-      <a-tooltip title="Xóa playlist hiện tại" placement="top">
+      <a-tooltip title="Quay lại danh sách ban đầu" placement="top">
         <a-button 
           type="text" 
           size="small" 
-          @click="clearPlaylist"
+          @click="clearCurrentList"
           class="clear-btn"
         >
           <template #icon>
             <Icon icon="material-symbols:close" />
           </template>
-          Xóa playlist
+          {{ clearButtonText }}
         </a-button>
       </a-tooltip>
     </div>
@@ -102,7 +104,7 @@
 
 <script setup>
 import SongItem from './SongItem.vue';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 
 const props = defineProps({
@@ -128,9 +130,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['select-song', 'change-playlist', 'open-modal', 'open-favorite-modal']);
+const emit = defineEmits(['select-song', 'change-playlist', 'open-modal', 'open-favorite-modal', 'clear-favorites']);
 
 const currentPage = ref(1);
+const currentFavoriteList = ref(false);
 
 const filteredSongs = computed(() => {
   // Nếu không có playlist được chọn hoặc đã clear, trả về tất cả bài hát
@@ -145,6 +148,8 @@ const filteredSongs = computed(() => {
 });
 
 const paginatedSongs = computed(() => {
+  if (filteredSongs.value.length === 0) return [];
+  
   const start = (currentPage.value - 1) * props.itemsPerPage;
   const end = start + props.itemsPerPage;
   return filteredSongs.value.slice(start, end);
@@ -153,6 +158,33 @@ const paginatedSongs = computed(() => {
 const currentPlaylist = computed(() => {
   if (!props.currentPlaylistId || !props.availablePlaylists?.length) return null;
   return props.availablePlaylists.find(playlist => playlist.id === props.currentPlaylistId);
+});
+
+const currentPlaylistName = computed(() => {
+  if (currentFavoriteList.value) return 'Danh sách yêu thích';
+  if (props.currentPlaylist) return props.currentPlaylist.name;
+  return '';
+});
+
+const clearButtonText = computed(() => {
+  return currentFavoriteList.value ? 'Quay lại' : 'Xóa playlist';
+});
+
+const clearCurrentList = () => {
+  if (currentFavoriteList.value) {
+    currentFavoriteList.value = false;
+    emit('clear-favorites');
+  } else {
+    clearPlaylist();
+  }
+};
+
+const handlePlayFavorites = () => {
+  currentFavoriteList.value = true;
+};
+
+defineExpose({
+  handlePlayFavorites
 });
 
 const handlePageChange = (page) => {
@@ -182,6 +214,13 @@ const totalPages = computed(() => {
 const goToPage = (page) => {
   currentPage.value = page;
 };
+
+watch(filteredSongs, (newSongs) => {
+  const newTotalPages = Math.ceil(newSongs.length / props.itemsPerPage);
+  if (currentPage.value > newTotalPages && newTotalPages > 0) {
+    currentPage.value = newTotalPages;
+  }
+});
 </script>
 
 <style scoped>
@@ -390,6 +429,11 @@ ul {
 
 :deep(.ant-tooltip-arrow::before) {
   background-color: rgba(0, 0, 0, 0.85);
+}
+
+.current-playlist-info.favorite {
+  border-left-color: #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.1);
 }
 
 @media (max-width: 768px) {

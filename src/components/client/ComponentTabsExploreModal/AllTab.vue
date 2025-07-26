@@ -4,7 +4,6 @@
     <div class="music-section">
       <div class="section-header">
         <h3 class="section-title">🎵 Bài hát gợi ý cho bạn</h3>
-        <a-button type="text" class="view-all-btn">Xem tất cả</a-button>
       </div>
       <div class="horizontal-scroll">
         <div class="song-cards">
@@ -35,7 +34,6 @@
     <div class="music-section">
       <div class="section-header">
         <h3 class="section-title">🔥 Đang thịnh hành</h3>
-        <a-button type="text" class="view-all-btn">Xem tất cả</a-button>
       </div>
       <div class="trending-list">
         <div 
@@ -74,7 +72,6 @@
     <div class="music-section">
       <div class="section-header">
         <h3 class="section-title">✨ Mới phát hành</h3>
-        <a-button type="text" class="view-all-btn">Xem tất cả</a-button>
       </div>
       <div class="horizontal-scroll">
         <div class="song-cards">
@@ -168,9 +165,12 @@ import { ref, computed, onMounted } from 'vue';
 import { PlayCircleFilled, PauseCircleFilled } from '@ant-design/icons-vue'
 import SongActionDropdown from '@/components/client/dropdowns/SongActionDropdown.vue';
 import { getRecommendSongs, getRecommendedArtists, getRecommendedPlaylists } from '@/services/recommendService.js';
+import { getPopularSongs, getNewReleases } from '@/services/songService.js';
 
 // Reactive data
 const recommendSongs = ref([]);
+const trendingSongs = ref([]);
+const newReleases = ref([]);
 const recommendedArtists = ref([]); 
 const recommendedPlaylists = ref([]);
 
@@ -184,21 +184,11 @@ const props = defineProps({
   },
   trendingSongs: {
     type: Array,
-    default: () => [
-      { id: 6, title: 'There\'s No One At All', artist: 'Sơn Tùng M-TP', cover: 'https://via.placeholder.com/150', playCount: 2100000 },
-      { id: 7, title: 'Chạy Về Khóc Với Anh', artist: 'ERIK x Suni Hạ Linh', cover: 'https://via.placeholder.com/150', playCount: 1800000 },
-      { id: 8, title: 'Đom Đóm', artist: 'Jack - J97', cover: 'https://via.placeholder.com/150', playCount: 1700000 },
-      { id: 9, title: 'Hãy Trao Cho Anh', artist: 'Sơn Tùng M-TP', cover: 'https://via.placeholder.com/150', playCount: 1600000 },
-      { id: 10, title: 'Anh Đã Quen Với Cô Đơn', artist: 'Soobin Hoàng Sơn', cover: 'https://via.placeholder.com/150', playCount: 1400000 }
-    ]
+    default: () => []
   },
   newReleases: {
     type: Array,
-    default: () => [
-      { id: 11, title: 'Tháng Tư Là Lời Nói Dối Của Em', artist: 'Hà Anh Tuấn', cover: 'https://via.placeholder.com/150', releaseDate: '2024-01-15' },
-      { id: 12, title: 'Người Lạ Ơi', artist: 'Superbrothers x Karik x Orange', cover: 'https://via.placeholder.com/150', releaseDate: '2024-01-12' },
-      { id: 13, title: '3107-3', artist: 'W/n x Duongg x Nâu', cover: 'https://via.placeholder.com/150', releaseDate: '2024-01-10' }
-    ]
+    default: () => []
   }
 })
 
@@ -235,22 +225,39 @@ const formatFollowers = (count) => {
 }
 
 const formatReleaseDate = (dateStr) => {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffTime = Math.abs(now - date)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays === 1) return 'Hôm qua'
-  if (diffDays < 7) return `${diffDays} ngày trước`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`
-  return `${Math.floor(diffDays / 30)} tháng trước`
-}
+  const releaseDate = new Date(dateStr);
+  const now = new Date();
+  const releaseDateOnly = new Date(releaseDate.getFullYear(), releaseDate.getMonth(), releaseDate.getDate());
+  const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffTime = nowOnly.getTime() - releaseDateOnly.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Hôm nay';
+  if (diffDays === 1) return 'Hôm qua';
+  if (diffDays === -1) return 'Ngày mai';
+  if (diffDays > 0) {
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} tháng trước`;
+    return `${Math.floor(diffDays / 365)} năm trước`;
+  } else {
+    const futureDays = Math.abs(diffDays);
+    if (futureDays < 7) return `${futureDays} ngày nữa`;
+    if (futureDays < 30) return `${Math.floor(futureDays / 7)} tuần nữa`;
+    if (futureDays < 365) return `${Math.floor(futureDays / 30)} tháng nữa`;
+    return `${Math.floor(futureDays / 365)} năm nữa`;
+  }
+};
 
 onMounted(async() => {
   try {
-    // Fetch songs
-    const songRecommendations = await getRecommendSongs(5);
+    const songRecommendations = await getRecommendSongs(8);
     recommendSongs.value = songRecommendations.data.data;
+
+    const popularResponse = await getPopularSongs(5);
+    trendingSongs.value = popularResponse.data;
+    
+    const newReleasesResponse = await getNewReleases(5);
+    newReleases.value = newReleasesResponse.data;
 
     const artistRecommendations = await getRecommendedArtists(4);
     recommendedArtists.value = artistRecommendations.data.data;
@@ -262,6 +269,9 @@ onMounted(async() => {
     console.log('Recommended Playlists:', recommendedPlaylists.value);
   } catch (error) {
     console.error('Error fetching recommendations:', error);
+    recommendSongs.value = [];
+    trendingSongs.value = [];
+    newReleases.value = [];
     recommendedArtists.value = [];
     recommendedPlaylists.value = [];
   }

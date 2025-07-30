@@ -7,15 +7,21 @@ export function usePlayer() {
   const nextSongSignalStore = useNextSongSignalStore()
   
   const currentSong = ref(null)
-  const isShuffled = ref(false)
   const currentAudioTime = ref(0)
   const currentLyric = ref('')
   const karaokeMode = ref(false)
+  const playerRef = ref(null)
   
   const isPlaying = computed({
     get: () => playerStore.isPlaying,
     set: (value) => playerStore.setPlayingState(value)
   })
+
+  const selectSong = (song) => {
+    currentSong.value = song
+    playerStore.setCurrentSongId(song.id)
+    playerStore.setPlayingState(true)
+  }
 
   const togglePlay = () => {
     isPlaying.value = !isPlaying.value
@@ -28,6 +34,12 @@ export function usePlayer() {
   const updateAudioTime = (time) => {
     currentAudioTime.value = time
     playerStore.setCurrentTime(time)
+  }
+
+  const handleSeek = (time) => {
+    if (playerRef.value) {
+      playerRef.value.seekTo(time)
+    }
   }
 
   const handleKaraokeToggle = (checked) => {
@@ -55,15 +67,20 @@ export function usePlayer() {
   }, { immediate: true })
 
   return {
+    // State
     currentSong,
-    isPlaying,
-    isShuffled,
     currentAudioTime,
     currentLyric,
     karaokeMode,
+    playerRef,
+    isPlaying,
+    
+    // Methods
+    selectSong,
     togglePlay,
     handlePausePlay,
     updateAudioTime,
+    handleSeek,
     handleKaraokeToggle
   }
 }

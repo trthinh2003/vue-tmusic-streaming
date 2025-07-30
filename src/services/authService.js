@@ -8,7 +8,7 @@ export async function getProfile() {
   const profileStore = useProfileStore();
   try {
     const res = await axiosInstance.get("/auth/me");
-    console.log("Roles từ BE:", res.data.role);
+    // console.log("Roles từ BE:", res.data.role);
     profileStore.setProfile(res.data);
     
     // Khởi động timer sau khi get profile thành công
@@ -16,7 +16,7 @@ export async function getProfile() {
     
     return res.data;
   } catch (error) {
-    console.error("Get profile error:", error);
+    // console.error("Get profile error:", error);
     profileStore.clearProfile();
     throw error;
   }
@@ -43,12 +43,12 @@ export async function refreshToken() {
 }
 
 export function startRefreshTokenTimer() {
-  console.log('Start refresh token timer...');
+  // console.log('Start refresh token timer...');
   stopRefreshTokenTimer();
 
   refreshTokenInterval = setInterval(() => {
     refreshToken();
-    console.log('Refresh token every 25 minutes!');
+    // console.log('Refresh token every 25 minutes!');
   }, 25 * 60 * 1000);
 }
 

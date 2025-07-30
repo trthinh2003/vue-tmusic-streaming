@@ -65,6 +65,7 @@ const animationInProgress = ref(false);
 
 
 const togglePlayPause = () => {
+  emit('toggle-play');
   isPlaying.value = !isPlaying.value;
 };
 

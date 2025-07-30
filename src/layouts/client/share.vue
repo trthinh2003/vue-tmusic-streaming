@@ -152,8 +152,8 @@
             v-if="lyricsContent && song"
             :lyrics="lyricsContent"
             :currentTime="currentTime"
-            :theme="'neon-blue'"
-            :karaokeMode="true"
+            :theme="''"
+            :karaokeMode="false"
             @seek="seekTo"
             @toggle-play="togglePlayPause"
           />
@@ -175,13 +175,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ExclamationCircleOutlined, LoginOutlined, HomeOutlined, LeftOutlined } from '@ant-design/icons-vue'
 import axiosInstance from '@/configs/axios'
 import { getSharedSong } from '@/services/songService'
 import LyricDisplay from '@/components/client/lyrics/LyricDisplay.vue'
+import { usePlayerStore } from '@/stores/playerStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -194,10 +195,15 @@ const user = ref({})
 const showLyricsDrawer = ref(false)
 const lyricsContent = ref('')
 const currentTime = ref(0)
-const isPlaying = ref(false)
+const isPlaying = computed({
+  get: () => playerStore.isPlaying,
+  set: (value) => playerStore.setPlayingState(value)
+})
 
 const loading = ref(true)
 const error = ref(null)
+
+const playerStore = usePlayerStore()
 
 onMounted(async () => {
   const shareToken = route.params.shareToken
@@ -227,7 +233,6 @@ const fetchSharedSong = async (shareToken) => {
       song.value = response.data.song
       shareInfo.value = response.data.shareInfo
       
-      // Fetch lyrics from Cloudinary URL
       if (song.value.lyric) {
         await fetchLyrics(song.value.lyric)
       }
@@ -318,11 +323,11 @@ const onTimeUpdate = () => {
 }
 
 const onPlay = () => {
-  isPlaying.value = true
+  playerStore.setPlayingState(true)
 }
 
 const onPause = () => {
-  isPlaying.value = false
+  playerStore.setPlayingState(false)
 }
 
 const seekTo = (time) => {
@@ -333,13 +338,23 @@ const seekTo = (time) => {
 
 const togglePlayPause = () => {
   if (audioPlayer.value) {
-    if (isPlaying.value) {
+    if (playerStore.isPlaying) {
       audioPlayer.value.pause()
     } else {
       audioPlayer.value.play()
     }
   }
 }
+
+watch(() => playerStore.isPlaying, (newIsPlaying) => {
+  if (audioPlayer.value) {
+    if (newIsPlaying && audioPlayer.value.paused) {
+      audioPlayer.value.play()
+    } else if (!newIsPlaying && !audioPlayer.value.paused) {
+      audioPlayer.value.pause()
+    }
+  }
+})
 
 onUnmounted(() => {
   if (audioPlayer.value) {
@@ -459,7 +474,7 @@ onUnmounted(() => {
   min-width: 50px;
   height: 50px;
   border-radius: 25px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(26, 26, 46, 0.9);
   backdrop-filter: blur(15px);
   border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
@@ -476,7 +491,7 @@ onUnmounted(() => {
 }
 
 .lyrics-btn:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  background: rgba(0, 0, 0, 0.06);
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
 }
@@ -741,6 +756,7 @@ onUnmounted(() => {
   position: relative;
   height: 100%;
   overflow: hidden;
+  background: rgba(0, 0, 0, 0.97);
 }
 
 .lyrics-background {

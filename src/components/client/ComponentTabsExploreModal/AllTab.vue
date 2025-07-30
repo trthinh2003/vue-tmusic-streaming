@@ -250,7 +250,7 @@ const formatReleaseDate = (dateStr) => {
 
 onMounted(async() => {
   try {
-    const songRecommendations = await getRecommendSongs(8);
+    const songRecommendations = await getRecommendSongs(10);
     recommendSongs.value = songRecommendations.data.data;
 
     const popularResponse = await getPopularSongs(5);

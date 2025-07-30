@@ -5,22 +5,18 @@
     </a>
     <template #overlay>
       <a-menu @click="(e) => handleAction(e.key)">
-        <a-menu-item key="add">
+        <a-menu-item key="add" class="add-to-playlist-dropdown">
           <template #icon><plus-outlined /></template>
           Thêm vào playlist
         </a-menu-item>
-        <a-menu-item key="favorite">
-          <template #icon><heart-outlined /></template>
-          Yêu thích
-        </a-menu-item>
-        <a-menu-item key="download" :class="{ 'downloaded': isDownloaded }">
+        <a-menu-item key="download" :class="['download-dropdown', { 'downloaded': isDownloaded }]">
           <template #icon>
-            <check-outlined v-if="isDownloaded" style="color: #28a745;" />
+            <check-outlined v-if="isDownloaded"/>
             <download-outlined v-else />
           </template>
           {{ isDownloaded ? 'Đã tải xuống' : 'Tải xuống' }}
         </a-menu-item>
-        <a-menu-item key="share">
+        <a-menu-item key="share" class="share-dropdown">
           <template #icon><share-alt-outlined /></template>
           Chia sẻ
         </a-menu-item>
@@ -31,7 +27,7 @@
 
 <script setup>
 import { 
-  MoreOutlined, PlusOutlined, HeartOutlined, 
+  MoreOutlined, PlusOutlined, 
   DownloadOutlined, ShareAltOutlined, CheckOutlined 
 } from '@ant-design/icons-vue';
 
@@ -62,5 +58,26 @@ const handleAction = (actionKey) => {
 
 :deep(.anticon):hover {
   color: #fff;
+}
+</style>
+
+<style>
+.add-to-playlist-dropdown .anticon {
+  color: #000;
+}
+.add-to-playlist-dropdown .anticon:hover {
+  color: #968383;
+}
+.download-dropdown .anticon {
+  color: #000;
+}
+.download-dropdown .anticon:hover {
+  color: #968383;
+}
+.share-dropdown .anticon {
+  color: #000;
+}
+.share-dropdown .anticon:hover {
+  color: #968383;
 }
 </style>

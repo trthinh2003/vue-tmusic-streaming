@@ -53,7 +53,7 @@
           <div class="song-list-section">
             <h4 class="section-title">
               <i class="fa-solid fa-music"></i>
-              Bài hát cùng ca sĩ
+              Bài hát cùng nghệ sĩ
             </h4>
             <div class="song-list">
               <div 

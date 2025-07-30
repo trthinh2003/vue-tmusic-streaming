@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, h } from 'vue';
 import { 
   DeleteOutlined,
   PlayCircleOutlined 
@@ -142,8 +142,8 @@ const fetchFavoriteSongs = async () => {
 // Xóa bài hát khỏi danh sách yêu thích
 const removeFromFavorites = async (song) => {
   Modal.confirm({
-    title: 'Xác nhận xóa',
-    content: `Bạn chắc chắn muốn xóa bài hát "${song.songTitle || song.title}" khỏi danh sách yêu thích?`,
+    title: h('div', { style: { color: 'white' } }, 'Xác nhận xóa'),
+    content: h('div', { style: { color: 'white' } },`Bạn chắc chắn muốn xóa bài hát "${song.songTitle || song.title}" khỏi danh sách yêu thích?`),
     okText: 'Xóa',
     okType: 'danger',
     cancelText: 'Hủy',

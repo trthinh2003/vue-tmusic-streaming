@@ -1,56 +1,55 @@
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useProfileStore } from '@/stores/useProfile.js'
 
 export function useUI() {
-  const visible = ref(false)
-  const showMobileSearch = ref(false)
-  const openRightDrawer = ref(false)
-  const showRightDrawer = ref(true)
-  const openSongDetail = ref(false)
+  const currentUser = ref({})
   const drawerLyricWidth = ref('50vw')
+  
+  // Background management
+  const currentBackground = computed(() => {
+    return (song) => song?.background || 'linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%)'
+  })
 
-  const showDrawer = () => {
-    visible.value = true
-  }
-
-  const toggleRightDrawer = () => {
-    showRightDrawer.value = !showRightDrawer.value
-    openRightDrawer.value = true
-  }
-
-  const onCloseRightDrawer = () => {
-    openRightDrawer.value = false
-  }
-
-  const toggleSongDetail = () => {
-    openSongDetail.value = !openSongDetail.value
-  }
-
+  // Responsive drawer width management
   const updateDrawerWidth = () => {
     const width = window.innerWidth
-    if (width < 576) drawerLyricWidth.value = '90vw'
-    else if (width < 768) drawerLyricWidth.value = '80vw'
-    else drawerLyricWidth.value = '350px'
+    if (width < 576) drawerLyricWidth.value = '90vw'       // Mobile
+    else if (width < 768) drawerLyricWidth.value = '80vw'   // Tablet
+    else drawerLyricWidth.value = '350px'                   // Desktop
   }
 
-  onMounted(() => {
+  // Initialize user profile
+  const initializeUserProfile = () => {
+    currentUser.value = useProfileStore().getProfile()
+  }
+
+  // Update user profile
+  const updateUserProfile = () => {
+    currentUser.value = useProfileStore().getProfile()
+  }
+
+  // Setup responsive handlers
+  const setupResponsiveHandlers = () => {
     updateDrawerWidth()
     window.addEventListener('resize', updateDrawerWidth)
-  })
+  }
 
-  onBeforeUnmount(() => {
+  // Cleanup responsive handlers
+  const cleanupResponsiveHandlers = () => {
     window.removeEventListener('resize', updateDrawerWidth)
-  })
+  }
 
   return {
-    visible,
-    showMobileSearch,
-    openRightDrawer,
-    showRightDrawer,
-    openSongDetail,
+    // State
+    currentUser,
     drawerLyricWidth,
-    showDrawer,
-    toggleRightDrawer,
-    onCloseRightDrawer,
-    toggleSongDetail
+    currentBackground,
+    
+    // Methods
+    updateDrawerWidth,
+    initializeUserProfile,
+    updateUserProfile,
+    setupResponsiveHandlers,
+    cleanupResponsiveHandlers
   }
 }

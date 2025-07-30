@@ -41,6 +41,7 @@ import { ref, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 import LyricDisplay from '@/components/client/lyrics/LyricDisplay.vue';
 import CommentSection from '@/components/client/lyrics/CommentSection.vue';
+import { useProfileStore } from '@/stores/useProfile';
 
 const props = defineProps({
   currentLyric: String,
@@ -52,11 +53,9 @@ const props = defineProps({
 const emit = defineEmits(['seek-lyric']);
 
 const activeTab = ref('lyric');
-const currentUser = ref({
-  id: 1,
-  name: 'Người dùng',
-  avatar: 'https://randomuser.me/api/portraits/men/1.jpg'
-});
+const currentUser = ref({});
+
+currentUser.value = useProfileStore().getProfile();
 
 // const handleKaraokeToggle = (checked) => {
 //   console.log('Karaoke mode:', checked);

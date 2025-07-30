@@ -93,12 +93,12 @@
                             <span>Bình luận</span>
                         </router-link>
                     </li>
-                    <li class="menu-item" :class="{ 'active': $route.path.startsWith('/admin/playlists') }">
+                    <!-- <li class="menu-item" :class="{ 'active': $route.path.startsWith('/admin/playlists') }">
                         <router-link to="/admin/playlists">
                             <i class="fas fa-list-ol"></i>
                             <span>Playlist</span>
                         </router-link>
-                    </li>
+                    </li> -->
                 </ul>
             </div>
 

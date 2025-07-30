@@ -164,6 +164,12 @@
     @add-to-playlist="addSongToPlaylist"
     @create-playlist="createNewPlaylist"
   />
+  <!-- Modal chia sẻ QR code -->
+  <ShareQRModal
+    :open="showShareModal"
+    :song="selectedSongForShare"
+    @close="showShareModal = false"
+  />
 </template>
 
 <script setup>
@@ -175,6 +181,7 @@ import AlbumTab from '@/components/client/ComponentTabsExploreModal/AlbumTab.vue
 import ArtistTab from '@/components/client/ComponentTabsExploreModal/ArtistTab.vue';
 import AddSongToPlaylistModal from '@/components/client/modals/AddSongToPlaylistModal.vue';
 import DownloadModal from '@/components/client/modals/DownloadModal.vue';
+import ShareQRModal from '@/components/client/modals/ShareQRModal.vue';
 import { useSongActions } from '@/composables/useSongActions';
 import { debounce } from 'lodash';
 import { 
@@ -189,7 +196,6 @@ import { useSearchFilterModalStore } from '@/stores/useSearchFilterModalStore';
 import { message } from 'ant-design-vue';
 import { getSongs } from '@/services/songService';
 import { downloadService } from '@/services/downloadService';
-
 
 const searchStore = useSearchFilterModalStore();
 const props = defineProps({
@@ -218,6 +224,9 @@ const loadingAbortController = ref(null);
 const downloadStatuses = ref(new Map());
 const showDownloadModal = ref(false);
 const selectedSongForDownload = ref(null);
+
+const showShareModal = ref(false);
+const selectedSongForShare = ref(null);
 
 const filteredSongs = ref([]);
 
@@ -260,16 +269,16 @@ watch(() => searchStore.searchQuery, (newQuery) => {
   debouncedSearch(newQuery);
 });
 
-// Xử lý tải bài hát
+// Xử lý các tương tác với bài hát
 const handleSongAction = async (action, song) => {
+  console.log('Handle song action:', action, song?.title);
+  
   if (action === 'download') {
     try {
       const status = await downloadService.checkDownloadStatus(song.id);
-      
       if (status.hasDownloaded) {
         message.info(`Bài hát "${song.title}" đã được tải xuống trước đó`);
       }
-      
       selectedSongForDownload.value = song;
       showDownloadModal.value = true;
     } catch (error) {
@@ -277,6 +286,14 @@ const handleSongAction = async (action, song) => {
       selectedSongForDownload.value = song;
       showDownloadModal.value = true;
     }
+  } else if (action === 'share') {
+    if (showShareModal.value) {
+      showShareModal.value = false;
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    selectedSongForShare.value = song;
+    await nextTick();
+    showShareModal.value = true;
   } else {
     originalHandleSongAction(action, song);
   }

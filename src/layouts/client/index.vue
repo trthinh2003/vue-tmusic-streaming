@@ -6,14 +6,6 @@
         <a-button type="text" @click="showDrawer" class="menu-btn">
           <i class="fa-solid fa-bars"></i>
         </a-button>
-        <a-button 
-          type="text" 
-          class="help-btn" 
-          @click.stop="showHelpModal"
-          style="padding: 0; width: 28px; height: 28px; border-radius: 50%; background-color: #444;"
-        >
-          <i class="fa-solid fa-question"></i>
-        </a-button>
       </div>
 
       <div class="ms-0 me-2">
@@ -191,8 +183,9 @@
           <h1><span class="text-white">TMusic</span>Streaming</h1>
           <a-button 
             type="text" 
-            class="help-btn" 
-            @click="showHelpModal"
+            class="tour-btn" 
+            @click="startTour"
+            style="margin-left: 8px;"
           >
             <i class="fa-solid fa-question" 
               style="color: #fff; font-size: 14px; background-color: #444; padding: 7px; border-radius: 50%;">
@@ -248,8 +241,8 @@
           :is-playing="isPlaying"
           :playlist="songs"
           @toggle-play="togglePlay"
-          @next-song="nextSong"
-          @prev-song="prevSong"
+          @next-song="nextSongHandler"
+          @prev-song="prevSongHandler"
           @update-shuffle="handleShuffleUpdate"
           @timeupdate="updateAudioTime"
           @favorite-updated="handleFavoriteUpdate"
@@ -288,6 +281,7 @@
         backgroundRepeat: 'no-repeat',
         width: '100%',
         marginLeft: 'auto',
+        zIndex: '1000'
       }"
   >
     <template #extra>
@@ -325,34 +319,6 @@
     @show-share-modal="showShareModal"
     @toggle-right-drawer="toggleRightDrawer"
   />
-
-  <!-- Modal xác nhận logout -->
-  <a-modal 
-    v-model:open="logoutModalVisible"
-    :footer="null"
-    :closable="false"
-    centered
-    class="logout-modal"
-  >
-    <div class="logout-modal-content">
-      <img 
-        :src="logoutImage"
-        alt="Tiếc nuối khi logout"
-        class="logout-image"
-      />
-      <p class="logout-message">Chúng tôi sẽ nhớ bạn lắm đó!</p>
-      <div class="logout-actions">
-        <a-button type="primary" @click="confirmLogout" danger>
-          <i class="fa-solid fa-right-from-bracket me-2"></i>
-          Đăng xuất
-        </a-button>
-        <a-button @click="logoutModalVisible = false">
-          <i class="fa-solid fa-xmark me-2"></i>
-          Ở lại
-        </a-button>
-      </div>
-    </div>
-  </a-modal>
   <PlayListModal
     :open="showModal"
     @update:open="showModal = $event"
@@ -369,11 +335,6 @@
     @play-favorites="handlePlayFavorites"
     @close="handleCloseFavoriteModal"
   />
-  <HelpGuideModal 
-    v-model="helpModalVisible"
-    :steps="helpSteps"
-    @close="handleHelpModalClose"
-  />
   <ShareQRModal
     v-model:open="shareModalVisible"
     :song="currentSong"
@@ -383,643 +344,282 @@
     @update:open="showProfileModal = $event"
     @profile-updated="handleProfileUpdated"
   />
+  <a-tour 
+    v-model:open="tourVisible" 
+    :steps="steps" 
+    :current="currentStep"
+    @change="(current) => currentStep = current"
+    @close="closeTour"
+    @finish="closeTour"
+    type="primary"
+    :arrow="{ pointAtCenter: true }"
+  >
+    <template #indicatorsRender="{ current, total }">
+      <span>{{ current + 1 }} / {{ total }}</span>
+    </template>
+  </a-tour>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed, onBeforeUnmount  } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
 
+// Components
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
 import PlayListModal from '@/components/client/modals/PlayListModal.vue'
 import ExploreModal from '@/components/client/modals/ExploreModal.vue'
 import LyricWithComments from '@/components/client/lyrics/LyricWithComments.vue'
-import HelpGuideModal from '@/components/client/modals/HelpGuideModal.vue'
 import FavoriteModal from '@/components/client/modals/FavoriteModal.vue'
 import FilterModal from '@/components/client/modals/FilterModal.vue'
 import SongDetailDrawer from '@/components/client/SongDetailDrawer.vue'
 import ShareQRModal from '@/components/client/modals/ShareQRModal.vue'
 import ProfileModal from '@/components/client/modals/ProfileModal.vue'
 
-import { Button, Drawer, Input } from 'ant-design-vue'
+// UI Components
+import { Button, Drawer, Input, Tour } from 'ant-design-vue'
 import { Icon } from '@iconify/vue'
-import axiosInstance from '@/configs/axios'
-import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
-import { getSongs, getRandomSongs, getSongByPlaylist, getSongsFromFavorites, getSongByArtist } from '@/services/songService'
-import { getMyPlaylists } from '@/services/playlistService'
-import { getRecommendSongs } from '@/services/recommendService'
 
+// Composables
+import { usePlayer } from '@/composables/Main/usePlayer'
+import { usePlaylist } from '@/composables/Main/usePlaylist'
+import { useFilters } from '@/composables/Main/useFilters'
+import { useModals } from '@/composables/Main/useModals'
+import { useFavorites } from '@/composables/Main/useFavorites'
+import { useSongRecommendations } from '@/composables/Main/useSongRecommendations'
+import { useTour } from '@/composables/Main/useTour'
+
+// Stores
 import { useProfileStore } from '@/stores/useProfile.js'
-import { useFavoriteStore } from '@/stores/useFavoriteStore'
-import { useNextSongSignalStore } from '@/stores/nextSongSignalStore';
-import { usePlayerStore } from '@/stores/playerStore';
 
-import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg';
-import logoutImage from '@/assets/client/guide/logout_done.png';
-import guideImage1 from '@/assets/client/guide/guide.png';
-import guideImage2 from '@/assets/client/guide/guide.png';
+// Assets
+import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg'
+import adminLogo from '@/assets/img/admin-logo.png'
 
-import adminLogo from '@/assets/img/admin-logo.png';
+// Initialize composables
+const {
+  currentSong,
+  currentAudioTime,
+  currentLyric,
+  karaokeMode,
+  playerRef,
+  isPlaying,
+  selectSong,
+  togglePlay,
+  handlePausePlay,
+  updateAudioTime,
+  handleSeek,
+  handleKaraokeToggle
+} = usePlayer()
 
-const showProfileModal = ref(false);
-const openProfileModal = () => {
-  showProfileModal.value = true;
-};
+const {
+  originalPlaylist,
+  songs,
+  playlists,
+  currentPlaylistId,
+  isShuffled,
+  playlistRef,
+  currentPlaylist,
+  getSongsFromServer,
+  fetchPlaylists,
+  handleShuffleUpdate,
+  nextSong,
+  prevSong,
+  handlePlayPlaylist,
+  handlePlayFavorites,
+  handleClearFavorites,
+  handleChangePlaylist,
+  handlePlaylistChange
+} = usePlaylist(currentSong, isPlaying)
 
-const handleProfileUpdated = (updatedUser) => {
-  console.log("Profile updated successfully:", updatedUser);
-  message.success('Hồ sơ đã được cập nhật!');
-  currentUser.value = useProfileStore().getProfile();
-};
+const {
+  searchQuery,
+  filters,
+  visibleFilterModal,
+  hasActiveFilters,
+  activeFilters,
+  filteredSongs,
+  openFilterModal,
+  applyFilter,
+  clearAllFilters,
+  removeFilter,
+  getFilterLabel,
+  updateFilters,
+  handleSearch
+} = useFilters(originalPlaylist, songs, currentSong)
 
-const originalPlaylist = ref([]);
-const favoriteStore = useFavoriteStore()
-const nextSongSignalStore = useNextSongSignalStore();
-const playerStore = usePlayerStore();
+const {
+  visible,
+  showModal,
+  showFavoriteModal,
+  shareModalVisible,
+  showProfileModal,
+  visibleExploreModal,
+  openSongDetail,
+  openRightDrawer,
+  showRightDrawer,
+  drawerLyricWidth,
+  showMobileSearch,
+  showDrawer,
+  toggleRightDrawer,
+  onCloseRightDrawer,
+  openExploreModal,
+  handleOpenFavoriteModal,
+  handleCloseFavoriteModal,
+  openProfileModal,
+  showShareModal,
+  toggleSongDetail,
+  handleLogout,
+  handleProfileUpdated,
+  updateDrawerWidth
+} = useModals()
 
-const shareModalVisible = ref(false);
+const {
+  isFavorite,
+  handleFavoriteUpdate,
+  toggleFavorite,
+  initializeFavorites
+} = useFavorites(songs, currentSong)
 
-const getSongsFromServer = async () => {
-  try {
-    const response = await getRandomSongs(1, 31, 30);
-    originalPlaylist.value = response.data.data;
-    songs.value = [...originalPlaylist.value];
-    currentSong.value = songs.value[0];
-    console.log('Songs loaded:', songs.value);
-  } catch (error) {
-    // console.error('Error loading songs:', error);
-    // message.error('Không thể tải danh sách bài hát');
-    // throw error;
-  }
-}
-getSongsFromServer();
+const {
+  sameArtistSongs,
+  suggestedSongs,
+  fetchSameArtistSongs,
+  fetchRecommendedSongs
+} = useSongRecommendations(currentSong, openSongDetail)
 
-const songs = ref([...originalPlaylist.value])
+const {
+  tourVisible,
+  currentStep,
+  steps,
+  startTour,
+  nextStep,
+  prevStep,
+  closeTour
+} = useTour()
+
+// Local state
 const currentUser = ref({})
-const currentSong = ref(songs.value[0])
-const isPlaying = computed({
-  get: () => playerStore.isPlaying,
-  set: (value) => playerStore.setPlayingState(value)
-});
-const isShuffled = ref(false)
-const visible = ref(false)
-const showMobileSearch = ref(false) 
-const searchQuery = ref('')
-const router = useRouter()
-const visibleExploreModal = ref(false);
-const visibleFilterModal = ref(false);
-const filters = ref({ songName: '', artistName: '', genre: '' });
-const showRightDrawer = ref(true)
-const openRightDrawer = ref(false)
-
-const currentLyric = ref('');
-const currentAudioTime = ref(0);
-
-const karaokeMode = ref(false);
-
-const logoutModalVisible = ref(false);
-
-currentUser.value = useProfileStore().getProfile();
-
-/*****************Chi tiết bài hát và hệ thống gợi ý*****************/
-const openSongDetail = ref(false);
-const isFavorite = (id) => {
-  const song = songs.value.find(s => s.id === id);
-  if (song && typeof song.isFavorite === 'boolean') {
-    return song.isFavorite;
-  }
-  // Fallback về favorite store
-  return favoriteStore.isFavorite(id);
-}
-const handleFavoriteUpdate = (songId, isFavorite) => {
-  const song = songs.value.find(s => s.id === songId)
-  if (song) song.isFavorite = isFavorite
-
-  if (currentSong.value?.id === songId) {
-    currentSong.value.isFavorite = isFavorite
-  }
-}
-
-
-const sameArtistSongs = ref([]);
-const fetchSameArtistSongs = async (artistName) => {
-  if (!artistName) {
-    sameArtistSongs.value = [];
-    return;
-  }
-  try {
-    const response = await getSongByArtist(artistName);
-    sameArtistSongs.value = response.data.data.filter(song => song.id !== currentSong.value.id);
-  } catch (error) {
-    console.error('Error fetching songs by artist:', error);
-    sameArtistSongs.value = [];
-  }
-};
-
-const suggestedSongs = ref([]);
-const fetchRecommendedSongs = async () => {
-  try {
-    const response = await getRecommendSongs(10) // Lấy 10 bài hát gợi ý
-    suggestedSongs.value = response.data.data || []
-  } catch (error) {
-    console.error('Error fetching recommended songs:', error)
-    suggestedSongs.value = []
-  }
-}
-
-watch(() => openSongDetail.value, (newVal) => {
-  if (newVal && currentSong.value) {
-    fetchSameArtistSongs(currentSong.value.artist);
-    fetchRecommendedSongs();
-  } else {
-    sameArtistSongs.value = [];
-    suggestedSongs.value = [];
-  }
-});
-
-watch(currentSong, (newSong, oldSong) => {
-  if (openSongDetail.value && newSong && newSong.artist !== oldSong?.artist) {
-    fetchSameArtistSongs(newSong.artist);
-  }
-  if (openSongDetail.value && newSong) {
-    fetchRecommendedSongs();
-  }
-}, { deep: true });
-
-const playSong = (song) => {
-  selectSong(song);
-}
-
-const toggleSongDetail = () => {
-  openSongDetail.value = !openSongDetail.value;
-};
-
-const showShareModal = () => {
-  shareModalVisible.value = true
-}
-
-const toggleFavorite = async (id) => {
-  try {
-    const status = await favoriteStore.toggle(id)
-    handleFavoriteUpdate(id, status)
-  } catch (error) {
-    console.error('Error toggling favorite:', error)
-  }
-}
-const handleKaraokeToggle = (checked) => {
-  karaokeMode.value = checked;
-};
-
-const openFilterModal = () => {
-  visibleFilterModal.value = true;
-};
-
-const applyFilter = (appliedFilters) => {
-  try {
-    const safeFilters = appliedFilters || { 
-      songName: '', 
-      artistName: '', 
-      genres: [] 
-    };
-    if (!safeFilters.songName && !safeFilters.artistName && 
-        (!safeFilters.genres || safeFilters.genres.length === 0)) {
-      songs.value = [...originalPlaylist.value];
-    } else {
-      songs.value = originalPlaylist.value.filter(song => {
-        const matchesSongName = safeFilters.songName 
-          ? song.title.toLowerCase().includes(safeFilters.songName.toLowerCase())
-          : true;
-        const matchesArtistName = safeFilters.artistName 
-          ? song.artist.toLowerCase().includes(safeFilters.artistName.toLowerCase())
-          : true;
-        const matchesGenres = safeFilters.genres?.length > 0
-          ? safeFilters.genres.some(genre => 
-              song.genre.toLowerCase().includes(genre.toLowerCase()))
-          : true;
-        return matchesSongName && matchesArtistName && matchesGenres;
-      });
-    }
-    if (songs.value.length > 0 && !songs.value.some(s => s.id === currentSong.value?.id)) {
-      currentSong.value = songs.value[0];
-    }
-    visibleFilterModal.value = false;
-  } catch (error) {
-    console.error('Filter error:', error);
-    message.error('Có lỗi khi áp dụng bộ lọc');
-  }
-};
-const clearAllFilters = () => {
-  filters.value = { songName: '', artistName: '', genres: [] };
-  songs.value = [...originalPlaylist.value];
-};
-
-const playerRef = ref(null);
-
-const handleSeek = (time) => {
-  if (playerRef.value) {
-    playerRef.value.seekTo(time);
-  }
-};
-
-/**************** Tabs ****************/
-// Computed property để kiểm tra có bộ lọc đang hoạt động không
-const hasActiveFilters = computed(() => {
-  return Object.values(filters.value).some(val => val !== '');
-});
-
-// Computed property để lọc ra các bộ lọc đang được áp dụng
-const activeFilters = computed(() => {
-  return Object.fromEntries(
-    Object.entries(filters.value).filter(([_, value]) => value !== '')
-  );
-});
-
-// Method để xóa từng bộ lọc
-const removeFilter = (filterKey) => {
-  if (filterKey === 'genres') {
-    filters.value.genres = [];
-  } else {
-    filters.value[filterKey] = '';
-  }
-  applyFilter(filters.value);
-};
-
-// Method để hiển thị label cho từng loại filter
-const getFilterLabel = (key) => {
-  const labels = {
-    songName: 'Tên bài hát',
-    artistName: 'Nghệ sĩ',
-    genre: 'Thể loại'
-  };
-  return labels[key] || key;
-};
-
-const updateFilters = (newFilters) => {
-  filters.value = newFilters;
-}
-
-// Lọc bài hát theo từ khóa
-const filteredSongs = computed(() => {
-  if (!searchQuery.value) return songs.value
-  const query = searchQuery.value.toLowerCase()
-  return songs.value.filter(song => 
-    song.title.toLowerCase().includes(query) || 
-    song.artist.toLowerCase().includes(query) ||
-    song.genre.toLowerCase().includes(query)
-  )
-})
-
-const showDrawer = () => {
-  visible.value = true
-}
-
-const handleSearch = () => {
-  if (showMobileSearch.value) {
-    showMobileSearch.value = false
-  }
-}
-
-// Trộn bài
-const shufflePlaylist = () => {
-  const shuffled = [...filteredSongs.value.length > 0 ? filteredSongs.value : songs.value];
-  
-  // Thuật toán Fisher-Yates
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  
-  songs.value = shuffled;
-  
-  // Đảm bảo bài hát hiện tại vẫn trong playlist
-  if (!shuffled.some(song => song.id === currentSong.value.id)) {
-    currentSong.value = shuffled[0];
-    isPlaying.value = true;
-  }
-}
-
-// Khôi phục playlist gốc
-const restorePlaylist = () => {
-  songs.value = [...originalPlaylist.value];
-  // Nếu đang áp dụng bộ lọc, cần giữ nguyên trạng thái filter
-  if (hasActiveFilters.value) {
-    applyFilter();
-  }
-}
-
-// Xử lý khi bật/tắt shuffle
-const handleShuffleUpdate = (shuffleStatus) => {
-  isShuffled.value = shuffleStatus;
-  if (shuffleStatus) {
-    shufflePlaylist();
-  } else {
-    restorePlaylist();
-  }
-  
-  // Đảm bảo UI cập nhật
-  if (filteredSongs.value.length > 0 && !filteredSongs.value.some(s => s.id === currentSong.value.id)) {
-    currentSong.value = filteredSongs.value[0];
-  }
-}
-
-// Chọn bài hát
-const selectSong = (song) => {
-  currentSong.value = song
-  playerStore.setCurrentSongId(song.id);
-  playerStore.setPlayingState(true);
-  visible.value = false // Đóng Drawer khi chọn bài hát trên mobile
-}
-
-// Play/Pause
-const togglePlay = () => {
-  isPlaying.value = !isPlaying.value
-}
-
-// Dừng hát bài hát hiện tại tại component Player nếu có bài hát khác đc phát trong FilterModal
-const handlePausePlay = () => {
-  isPlaying.value = false
-}
-
-// Bài tiếp theo
-const nextSong = () => {
-  const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id)
-  const nextIndex = (currentIndex + 1) % filteredSongs.value.length
-  currentSong.value = filteredSongs.value[nextIndex]
-  isPlaying.value = true
-  nextSongSignalStore.triggerRefresh(currentSong.value.id)
-}
-
-// Bài trước đó
-const prevSong = () => {
-  const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id)
-  const prevIndex = (currentIndex - 1 + filteredSongs.value.length) % filteredSongs.value.length
-  currentSong.value = filteredSongs.value[prevIndex]
-  isPlaying.value = true
-  nextSongSignalStore.triggerRefresh(currentSong.value.id)
-}
-
-watch(isShuffled, (newVal) => {
-  if (newVal) {
-    shufflePlaylist()
-  } else {
-    restorePlaylist()
-  }
-})
-
-watch(originalPlaylist, (newVal) => {
-  if (newVal.length > 0) {
-    songs.value = [...newVal];
-    if (!currentSong.value) {
-      currentSong.value = newVal[0];
-    }
-  }
-}, { deep: true });
-
-// Theo dõi thay đổi bài hát
-watch(currentSong, async (newSong) => {
-  // Kiểm tra null hoặc undefined
-  if (!newSong || !newSong.lyric) {
-    currentLyric.value = '';
-    return;
-  }
-
-  try {
-    if (typeof newSong.lyric === 'string') {
-      const response = await fetch(newSong.lyric);
-      currentLyric.value = await response.text();
-    } else {
-      currentLyric.value = newSong.lyric;
-    }
-  } catch (error) {
-    console.error('Error loading lyric:', error);
-    currentLyric.value = '';
-  }
-}, { immediate: true });
-
-// Hàm cập nhật thời gian audio
-const updateAudioTime = (time) => {
-  currentAudioTime.value = time;
-  playerStore.setCurrentTime(time);
-};
-
-const toggleRightDrawer = () => {
-  showRightDrawer.value = !showRightDrawer.value
-  openRightDrawer.value = true;
-}
-
-const onCloseRightDrawer = () => {
-  openRightDrawer.value = false
-}
 
 const currentBackground = computed(() => {
   return currentSong.value?.background || 'linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%)'
 })
 
-// Modal Guide
-const helpModalVisible = ref(false);
-const helpSteps = ref([
-  {
-    id: 1,
-    title: "Tìm kiếm bài hát",
-    description: "Sử dụng ô tìm kiếm để tìm bài hát theo tên, nghệ sĩ hoặc thể loại",
-    image: guideImage1
-  },
-  {
-    id: 2,
-    title: "Phát nhạc",
-    description: "Nhấn vào bài hát trong danh sách để phát, sử dụng các nút điều khiển để play/pause, chuyển bài",
-    image: guideImage2
-  }
-]);
-
-const showHelpModal = (e) => {
+const playSong = (song) => {
   try {
-    e?.stopPropagation();
-    e?.preventDefault();
-    
-    // Đảm bảo steps có dữ liệu trước khi hiển thị
-    if (!helpSteps.value || helpSteps.value.length === 0) {
-      console.error('Help steps data is empty');
-      return;
+    if (!song) {
+      console.warn('playSong called with invalid song:', song)
+      return
     }
-    
-    helpModalVisible.value = true;
-    console.log('Modal opened successfully');
+    selectSong(song)
   } catch (error) {
-    console.error('Error opening help modal:', error);
-    message.error('Có lỗi khi mở hướng dẫn');
+    console.error('Error in playSong:', error)
   }
-};
-
-const handleHelpModalClose = () => {
-  helpModalVisible.value = false;
-};
-
-const playlistRef = ref(null);
-// Modal Favorite
-const showFavoriteModal = ref(false);
-const handleOpenFavoriteModal = () => {
-  showFavoriteModal.value = true;
-};
-const handleCloseFavoriteModal = () => {
-  showFavoriteModal.value = false;
-};
-const handlePlayFavorites = async () => {
-  console.log('Đã emit nút "Phát bài hát yêu thích"');
-  try {
-    const res = await getSongsFromFavorites();
-    console.log('Danh sách bài hát yêu thích:', res.data.data);
-    originalPlaylist.value = res.data.data;
-    songs.value = [...originalPlaylist.value];
-    if (songs.value.length > 0) {
-      currentSong.value = songs.value[0];
-      isPlaying.value = true;
-    }
-    showFavoriteModal.value = false;
-    
-    if (playlistRef.value) {
-      playlistRef.value.handlePlayFavorites();
-    }
-  } catch (error) {
-    console.log('Không thể tải danh sách bài hát yêu thích', error);
-  }
-};
-
-const handleClearFavorites = () => {
-  getSongsFromServer();
-};
-
-// Modal Playlist
-const showModal = ref(false);
-const currentPlaylistId = ref(null);
-const playlists = ref([]);
-
-const handlePlaylistChange = (playlist) => {
-  currentPlaylistId.value = playlist?.id || null;
-  
-  // Nếu có playlist được chọn, load songs trong playlist
-  if (playlist) {
-    loadPlaylistSongs(playlist.id);
-  } else {
-    // Nếu không, load tất cả bài hát
-    loadAllSongs();
-  }
-};
-
-const handlePlayPlaylist = async (playlistId) => {
-  try {
-    currentPlaylistId.value = playlistId;
-    
-    const response = await getSongByPlaylist(playlistId);
-    console.log('Playlist songs:', response.data.data);
-    
-    originalPlaylist.value = response.data.data;
-    
-    songs.value = [...originalPlaylist.value];
-    
-    if (songs.value.length > 0) {
-      currentSong.value = songs.value[0];
-      isPlaying.value = true;
-    }
-    
-    showModal.value = false;
-  } catch (error) {
-    console.error('Error playing playlist:', error);
-    message.error('Không thể phát playlist');
-  }
-};
-
-const currentPlaylist = computed(() => {
-  return playlists.value.find(p => p.id === currentPlaylistId.value);
-});
-
-const fetchPlaylists = async () => {
-  try {
-    const response = await getMyPlaylists();
-    playlists.value = response.data;
-  } catch (error) {
-    // console.error('Error fetching playlists:', error);
-    // message.error('Không thể tải danh sách playlist');
-  }
-};
-
-const loadPlaylistSongs = async (playlistId) => {
-  try {
-    const response = await getSongsInPlaylist(playlistId);
-    songs.value = response.data.map(song => ({
-      ...song,
-      isFavorite: false
-    }));
-    return songs.value;
-  } catch (error) {
-    console.error('Error loading playlist songs:', error);
-    message.error('Không thể tải bài hát trong playlist');
-    return [];
-  }
-};
-
-const loadAllSongs = async () => {
-  try {
-    const response = await getSongs(1, 100);
-    songs.value = response.data.data;
-  } catch (error) {
-    console.error('Error loading all songs:', error);
-    message.error('Không thể tải danh sách bài hát');
-  }
-};
-
-const drawerLyricWidth = ref('50vw')
-function updateDrawerWidth() {
-  const width = window.innerWidth
-  if (width < 576) drawerLyricWidth.value = '90vw'       // Mobile
-  else if (width < 768) drawerLyricWidth.value = '80vw'   // Tablet
-  else drawerLyricWidth.value = '350px'                   // Desktop
 }
+
+const nextSongHandler = () => {
+  try {
+    console.log('nextSongHandler called')
+    console.log('Current filteredSongs:', filteredSongs.value)
+    console.log('Current song:', currentSong.value)
+    
+    if (!filteredSongs.value || filteredSongs.value.length === 0) {
+      console.warn('No filtered songs available')
+      return
+    }
+    
+    nextSong(filteredSongs.value)
+  } catch (error) {
+    console.error('Error in nextSongHandler:', error)
+  }
+}
+
+const prevSongHandler = () => {
+  try {
+    console.log('prevSongHandler called')
+    console.log('Current filteredSongs:', filteredSongs.value)
+    console.log('Current song:', currentSong.value)
+    
+    if (!filteredSongs.value || filteredSongs.value.length === 0) {
+      console.warn('No filtered songs available')
+      return
+    }
+    
+    prevSong(filteredSongs.value)
+  } catch (error) {
+    console.error('Error in prevSongHandler:', error)
+  }
+}
+
+// Profile handling
+const handleProfileUpdatedLocal = (updatedUser) => {
+  try {
+    const result = handleProfileUpdated(updatedUser)
+    currentUser.value = useProfileStore().getProfile()
+    return result
+  } catch (error) {
+    console.error('Error in handleProfileUpdatedLocal:', error)
+  }
+}
+
+// Lifecycle hooks
 onMounted(async () => {
-  updateDrawerWidth()
-  window.addEventListener('resize', updateDrawerWidth)
-  await fetchPlaylists()
-  const favoriteStore = useFavoriteStore()
-  await favoriteStore.fetchFavoriteIds()
-  await fetchRecommendedSongs()
+  try {
+    currentUser.value = useProfileStore().getProfile()
+    
+    updateDrawerWidth()
+    window.addEventListener('resize', updateDrawerWidth)
+    
+    await getSongsFromServer()
+    await fetchPlaylists()
+    await initializeFavorites()
+    await fetchRecommendedSongs()
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+  }
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateDrawerWidth)
+  try {
+    window.removeEventListener('resize', updateDrawerWidth)
+  } catch (error) {
+    console.error('Error in onBeforeUnmount:', error)
+  }
 })
 
-const handleChangePlaylist = (playlistId) => {
-  currentPlaylistId.value = playlistId;
-  
-  if (!playlistId) {
-    getSongsFromServer();
-  }
-};
-
-// Đăng xuất 
-const handleLogout = () => {
-  logoutModalVisible.value = true;
-};
-const confirmLogout = async () => {
+// Watchers
+watch(isShuffled, (newVal) => {
   try {
-    const response = await axiosInstance.get('/auth/logout');
-    if (response.status === 200) {
-      message.success(response.data.message);
-      setTimeout(() => {
-        router.push({ name: 'login' });
-      }, 1000);
+    if (newVal) {
+      handleShuffleUpdate(true)
+    } else {
+      handleShuffleUpdate(false)
     }
   } catch (error) {
-    message.error("Đã có lỗi xảy ra!");
-  } finally {
-    logoutModalVisible.value = false;
+    console.error('Error in isShuffled watch:', error)
   }
-};
+})
 
-const openExploreModal = () => {
-  visibleExploreModal.value = true;
-  visible.value = false; // Đóng drawer mobile nếu đang mở
-};
+watch(originalPlaylist, (newVal) => {
+  try {
+    if (newVal && newVal.length > 0) {
+      songs.value = [...newVal]
+      if (!currentSong.value) {
+        currentSong.value = newVal[0]
+      }
+    }
+  } catch (error) {
+    console.error('Error in originalPlaylist watch:', error)
+  }
+}, { deep: true })
+
+watch(() => visible.value, (newVal) => {
+  try {
+    if (!newVal && currentSong.value) {
+    }
+  } catch (error) {
+    console.error('Error in visible watch:', error)
+  }
+})
 </script>
 
 <style>
@@ -1095,21 +695,29 @@ const openExploreModal = () => {
 .toggle-sidebar-btn {
   position: fixed;
   top: 50%;
-  right: -9px;
+  right: -8px;
+  z-index: 1000;
+  min-width: 50px;
+  height: 50px;
+  border-radius: 25px;
   background: rgba(26, 26, 46, 0.9);
-  transform: translateY(-50%);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-  color: var(--text-light);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 20px;
-  z-index: 100;
-  height: 42px;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .toggle-sidebar-btn:hover {
-  color: var(--accent-color);
-  transform: translateX(-2px);
+  background: rgba(0, 0, 0, 0.06);
+  color: white;
+  transform: translateY(-2px) scale(1.05);
 }
 
 .ant-drawer .ant-drawer-title {
@@ -1435,54 +1043,6 @@ const openExploreModal = () => {
 </style>
 
 <style scoped>
-/* CSS cho modal logout */
-.logout-modal .ant-modal-content {
-  background: rgba(26, 26, 46, 0.95);
-  border-radius: 12px;
-  color: white;
-}
-
-.logout-modal .ant-modal-header {
-  background: transparent;
-  border-bottom: none;
-}
-
-.logout-modal .ant-modal-title {
-  color: white;
-  text-align: center;
-  font-size: 1.2rem;
-}
-
-.logout-modal-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-}
-
-.logout-image {
-  width: 100%;
-  max-height: 450px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.logout-message {
-  font-size: 1.1rem;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.logout-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  width: 100%;
-}
-</style>
-
-<style scoped>
 /* CSS cho help button */
 .help-btn {
   margin-left: 10px;
@@ -1493,5 +1053,48 @@ const openExploreModal = () => {
 .help-btn:hover {
   color: #fff;
   transform: scale(1.1);
+}
+</style>
+
+<style scoped>
+.tour-btn {
+  transition: all 0.3s;
+}
+
+.tour-btn:hover {
+  color: var(--accent-color);
+  transform: scale(1.1);
+}
+
+:deep(.ant-tour) {
+  width: 250px !important; 
+  max-width: 90vw;
+}
+
+:deep(.ant-tour-content) {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+:deep(.ant-tour-title) {
+  color: var(--accent-color);
+}
+
+:deep(.ant-tour-description) {
+  color: #eee;
+}
+
+:deep(.ant-tour-next-btn) {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+:deep(.ant-tour-prev-btn) {
+  color: #eee;
+}
+
+:deep(.ant-tour-indicator) {
+  background: var(--accent-color);
 }
 </style>

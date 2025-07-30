@@ -106,3 +106,5 @@ const cancelDelete = (id) => {
     console.log('Cancel delete:', id);
 };
 </script>
+
+<style scoped src="@/assets/admin/css/table-custom.css"></style>

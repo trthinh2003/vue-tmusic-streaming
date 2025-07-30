@@ -33,7 +33,10 @@ import {
     Checkbox,
     Divider,
     Alert,
-    Radio
+    Radio,
+    Tour,
+    Descriptions,
+    Space
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -82,6 +85,9 @@ app.use(Checkbox)
 app.use(Divider)
 app.use(Alert)
 app.use(Radio)
+app.use(Tour)
+app.use(Descriptions)
+app.use(Space)
 app.use(formatDate)
 app.use(truncateWords)
 app.use({

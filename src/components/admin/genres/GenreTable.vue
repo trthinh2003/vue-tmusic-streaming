@@ -5,41 +5,69 @@
         :pagination="false"
         :loading="loading"
         :bordered="true"
-        :scroll="{ x: 400, y: 500 }"
+        :scroll="{ x: 'max-content', y: 500 }"
+        :row-class-name="getRowClassName"
+        :custom-row="customRow"
+        row-key="id"
     >
         <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'action'">
-                <div class="action-buttons d-flex justify-content-center align-items-center gap-2 flex-wrap">
-                    <a-tooltip title="Chỉnh sửa">
-                        <a-button shape="circle" type="default" @click="$emit('show-edit', record)" class="action-btn edit-btn">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </a-button>
-                    </a-tooltip>
-                    <a-tooltip title="Xem chi tiết">
-                        <a-button shape="circle" class="me-1 mb-sm-0 mb-1" @click="$emit('show-detail', record)" style="color: #000">
-                            <i class="fa-solid fa-eye"></i>
-                        </a-button>
-                    </a-tooltip>
-                    <a-tooltip title="Xóa thể loại">
-                        <a-popconfirm title="Bạn có chắc muốn xóa thể loại này?" ok-text="Xác nhận" cancel-text="Hủy"
-                            @confirm="$emit('confirm-delete', record.id)">
-                            <a-button shape="circle" type="primary" danger class="action-btn delete-btn">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </a-button>
-                        </a-popconfirm>
-                    </a-tooltip>
-                </div>
+            <template v-if="column.key === 'index'">
+                {{ genres.indexOf(record) + 1 + (pagination.currentPage - 1) * pagination.perPage }}
+            </template>
+            
+            <!-- Thêm hiển thị ngày tạo -->
+            <template v-if="column.key === 'createdAt'">
+                <span v-if="record.createdAt">
+                    {{ formatDate(record.createdAt) }}
+                </span>
+                <span v-else>-</span>
             </template>
         </template>
     </a-table>
 </template>
 
 <script setup>
-defineProps({
+import { defineProps, defineEmits } from 'vue';
+
+const props = defineProps({
     columns: Array,
     genres: Array,
-    loading: Boolean
+    loading: Boolean,
+    pagination: Object,
+    selectedGenreId: [String, Number]
 });
 
-defineEmits(['show-edit', 'show-detail', 'confirm-delete']);
+const emit = defineEmits(['show-edit', 'show-detail', 'confirm-delete', 'row-click']);
+
+const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+};
+
+const handleRowClick = (record) => {
+    emit('row-click', record);
+};
+
+const getRowClassName = (record) => {
+    return record.id === props.selectedGenreId ? 'selected-row' : '';
+};
+
+// Sử dụng customRow thay vì @row-click
+const customRow = (record) => {
+    return {
+        onClick: () => {
+            handleRowClick(record);
+        },
+        style: {
+            cursor: 'pointer'
+        }
+    };
+};
 </script>
+
+<style scoped src="@/assets/admin/css/table-custom.css"></style>

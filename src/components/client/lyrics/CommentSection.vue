@@ -11,7 +11,7 @@
         class="comment-item"
       >
         <template #avatar>
-          <a-avatar :src="comment.user.avatar" />
+          <a-avatar :src="getAvatar(comment.user.avatar)" />
         </template>
         <template #author>
           <a>{{ comment.user.name }}</a>
@@ -37,7 +37,7 @@
           <div v-if="replyingComment && replyingComment.id === comment.id" class="reply-form">
             <a-comment>
               <template #avatar>
-                <a-avatar :src="currentUser.avatar" size="small" />
+                <a-avatar :src="getAvatar(currentUser.avatar)" size="small" />
               </template>
               <template #content>
                 <a-textarea
@@ -75,7 +75,7 @@
               class="reply-item"
             >
               <template #avatar>
-                <a-avatar :src="reply.user.avatar" size="small" />
+                <a-avatar :src="getAvatar(reply.user.avatar)" size="small" />
               </template>
               <template #author>
                 <a>{{ reply.user.name }}</a>
@@ -100,7 +100,7 @@
     <div class="comment-form">
       <a-comment>
         <template #avatar>
-          <a-avatar :src="currentUser.avatar" />
+          <a-avatar :src="getAvatar(currentUser.avatar)" size="small" />
         </template>
         <template #content>
           <a-textarea
@@ -135,6 +135,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 import { getComments, createComment, createCommentReply, toggleCommentLike } from '@/services/commentService';
 import { useNextSongSignalStore } from '@/stores/nextSongSignalStore';
+import adminLogo from '@/assets/img/admin-logo.png';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -160,6 +161,7 @@ const replyContent = ref('');
 const replySubmitting = ref(false);
 
 const nextSongSignalStore = useNextSongSignalStore();
+const getAvatar = (avatar) => avatar === '' ? adminLogo : avatar;
 
 // Lấy danh sách bình luận từ API
 const fetchComments = async () => {
@@ -396,6 +398,11 @@ onMounted(() => {
   font-size: 12px;
 }
 
+.reply-item :deep(.ant-avatar-sm) {
+  width: 32px;
+  height: 32px;
+}
+
 .ant-btn-primary:disabled {
   color: white;
   background-color: darkcyan;
@@ -423,6 +430,11 @@ onMounted(() => {
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.2);
+}
+
+.comment-form :deep(.ant-avatar-sm) {
+  width: 32px;
+  height: 32px;
 }
 
 .form-actions {

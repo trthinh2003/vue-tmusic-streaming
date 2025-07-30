@@ -284,13 +284,18 @@ const toggleShuffle = () => {
 	emit('update-shuffle', isShuffled.value)
 }
 
+let songEndedHandled = false;
 // Xử lý khi bài hát kết thúc
 const handleSongEnd = () => {
-	if (!isLooping.value) {
-		emit('next-song')
-	}
-}
-
+  if (songEndedHandled) return;
+  songEndedHandled = true;
+  if (!isLooping.value) {
+    emit('next-song');
+  }
+  setTimeout(() => {
+    songEndedHandled = false;
+  }, 500);
+};
 // Xử lý khi component được mount
 onMounted(() => {
 	if (audioPlayer.value) {

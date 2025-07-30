@@ -10,6 +10,23 @@ td.ant-table-cell-action {
   min-width: 60px !important;
 }
 
+:deep(.ant-table-tbody > tr) {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+:deep(.ant-table-tbody > tr:hover) {
+    background-color: #f0f8ff !important;
+}
+
+:deep(.selected-row) {
+    background-color: #e6f7ff !important;
+}
+
+:deep(.selected-row:hover) {
+    background-color: #d4edda !important;
+}
+
 .action-buttons .action-btn {
 	display: flex;
 	align-items: center;

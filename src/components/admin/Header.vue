@@ -9,12 +9,12 @@
         <div class="header-right">
             <div class="user-profile">
                 <img src="@/assets/img/admin-logo.png" alt="User" class="user-avatar">
-                <span class="user-name">Admin User</span>
+                <span class="user-name">Admin</span>
                 <i class="fas fa-chevron-down"></i>
             </div>
             <button class="notification-btn">
                 <i class="fas fa-bell"></i>
-                <span class="notification-badge">3</span>
+                <span class="notification-badge">0</span>
             </button>
         </div>
     </header>

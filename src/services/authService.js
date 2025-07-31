@@ -7,15 +7,12 @@ export async function getProfile() {
   const profileStore = useProfileStore();
   try {
     const res = await axiosInstance.get("/auth/me");
-    // console.log("Roles từ BE:", res.data.role);
     profileStore.setProfile(res.data);
     
-    // Khởi động timer sau khi get profile thành công
     startRefreshTokenTimer();
     
     return res.data;
   } catch (error) {
-    // console.error("Get profile error:", error);
     profileStore.clearProfile();
     throw error;
   }
@@ -42,12 +39,10 @@ export async function refreshToken() {
 }
 
 export function startRefreshTokenTimer() {
-  // console.log('Start refresh token timer...');
   stopRefreshTokenTimer();
 
   refreshTokenInterval = setInterval(() => {
     refreshToken();
-    // console.log('Refresh token every 25 minutes!');
   }, 25 * 60 * 1000);
 }
 
@@ -75,19 +70,23 @@ export async function handlePostLoginRedirect(userRole) {
   }
 }
 
-// Social Login Functions
+// Social Login Functions - Fixed URLs
 export function loginWithGoogle() {
-  const backendUrl = 'https://tmusic-streaming-net.onrender.com';
-  const frontendReturnUrl = 'https://tmusicstreaming.onrender.com/watch';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5298';
+  const frontendReturnUrl = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
   
   const googleAuthUrl = `${backendUrl}/api/socialauth/google?returnUrl=${encodeURIComponent(frontendReturnUrl)}`;
+  
+  console.log('Google Auth URL:', googleAuthUrl);
   window.location.href = googleAuthUrl;
 }
 
 export function loginWithFacebook() {
-  // const backendUrl = BE_URL || 'http://localhost:5298';
-  const backendUrl = 'http://localhost:5298';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5298';
+  
   const facebookAuthUrl = `${backendUrl}/api/socialauth/facebook`;
+  
+  console.log('Facebook Auth URL:', facebookAuthUrl);
   
   const popup = window.open(
     facebookAuthUrl,
@@ -141,6 +140,7 @@ export function loginWithFacebook() {
 // Kiểm tra trạng thái đăng nhập
 export async function checkAuthStatus() {
   try {
+    // Sử dụng lowercase cho URL
     const res = await axiosInstance.get('/socialauth/check-auth');
     
     if (res.data.isAuthenticated) {
@@ -157,16 +157,35 @@ export async function checkAuthStatus() {
   }
 }
 
-// Xử lý callback từ social auth (nếu không dùng popup)
+// Xử lý callback từ social auth 
 export function handleSocialCallback() {
   const urlParams = new URLSearchParams(window.location.search);
   const status = urlParams.get('status');
   const message = urlParams.get('message');
   
+  console.log('Social callback:', { status, message });
+  
   if (status === 'success') {
     return { success: true, message: decodeURIComponent(message || 'Đăng nhập thành công') };
   } else {
     return { success: false, message: decodeURIComponent(message || 'Đăng nhập thất bại') };
+  }
+}
+
+// Test function để kiểm tra kết nối
+export async function testSocialAuthController() {
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5298';
+    const testUrl = `${backendUrl}/api/socialauth/test`;
+    
+    const response = await fetch(testUrl);
+    const data = await response.json();
+    
+    console.log('SocialAuth controller test:', data);
+    return data;
+  } catch (error) {
+    console.error('SocialAuth controller test failed:', error);
+    throw error;
   }
 }
 

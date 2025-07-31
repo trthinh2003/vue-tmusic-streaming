@@ -93,8 +93,8 @@
         <div class="card-content">
           <h3>{{ summary.totalUsers || 0 }}</h3>
           <p>Người dùng</p>
-          <div class="trend-indicator neutral">
-            <i class="fas fa-minus"></i> 0.4%
+          <div class="trend-indicator positive">
+            <i class="fas fa-arrow-up"></i> 10%
           </div>
         </div>
       </div>

@@ -130,6 +130,7 @@ const fetchPlaylists = async (page = 1, size = pageSize.value, query = '') => {
     isLoadingPlaylists.value = true;
     const res = await getPlaylistsPopular(page, size, query);
     playlists.value = res.data.data;
+    console.log(res.data);
     totalItems.value = res.data.pagination.totalItems;
     currentPage.value = page;
   } catch (error) {

@@ -15,8 +15,8 @@
                     <i class="fas" :class="openSections.dashboard ? 'fa-angle-up' : 'fa-angle-down'"></i>
                 </div>
                 <ul class="sidebar-menu" v-show="openSections.dashboard">
-                    <li class="menu-item" :class="{ 'active': $route.path === '/admin/dashboard' }">
-                        <router-link to="/admin/dashboard">
+                    <li class="menu-item" :class="{ 'active': $route.path === '/admin/dashboards' }">
+                        <router-link to="/admin/dashboards">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Bảng điều khiển</span>
                         </router-link>
@@ -93,12 +93,12 @@
                             <span>Bình luận</span>
                         </router-link>
                     </li>
-                    <li class="menu-item" :class="{ 'active': $route.path.startsWith('/admin/playlists') }">
+                    <!-- <li class="menu-item" :class="{ 'active': $route.path.startsWith('/admin/playlists') }">
                         <router-link to="/admin/playlists">
                             <i class="fas fa-list-ol"></i>
                             <span>Playlist</span>
                         </router-link>
-                    </li>
+                    </li> -->
                 </ul>
             </div>
 

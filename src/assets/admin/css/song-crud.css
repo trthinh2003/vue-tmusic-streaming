@@ -1,0 +1,257 @@
+.song-create-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    color: #666;
+    font-size: 15px;
+}
+
+.back-link:hover {
+    color: #1890ff;
+}
+
+.page-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #333;
+    text-align: center;
+}
+
+.form-section {
+    margin-bottom: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-section :deep(.ant-card-head) {
+    background-color: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-input,
+.custom-select,
+.custom-textarea,
+.custom-tags {
+    width: 100%;
+    border-radius: 6px;
+}
+
+.custom-textarea {
+    resize: none;
+}
+
+.lyrics-editor-container {
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.lyrics-editor {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    resize: vertical;
+    min-height: 200px;
+    font-family: monospace;
+    line-height: 1.5;
+}
+
+.lyrics-editor:focus {
+    outline: none;
+}
+
+.editor-toolbar {
+    display: flex;
+    padding: 8px;
+    background: #fafafa;
+    border-top: 1px solid #f0f0f0;
+    gap: 8px;
+}
+
+.divider {
+    width: 1px;
+    background: #d9d9d9;
+    margin: 0 8px;
+}
+
+.lyrics-upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lyrics-preview {
+    margin-top: 16px;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    border: 1px dashed #d9d9d9;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.lyrics-preview pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: monospace;
+}
+
+.error-icon {
+    color: #ff4d4f;
+}
+
+.upload-container {
+    display: flex;
+    justify-content: center;
+}
+
+:deep(.ant-upload-wrapper.ant-upload-picture-card-wrapper .ant-upload.ant-upload-select) {
+    width: 100%;
+    height: 100%;
+}
+
+.avatar-uploader {
+    width: 200px;
+    height: 200px;
+    border-radius: 8px;
+    background-color: #fafafa;
+    border: 1px dashed #d9d9d9;
+    transition: border-color 0.3s;
+}
+
+.avatar-uploader:hover {
+    border-color: #1890ff;
+}
+
+.avatar-preview-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.avatar-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.edit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: 6px;
+}
+
+.editor-toolbar .ant-btn[type="link"] {
+    padding: 0 8px;
+    height: auto;
+}
+
+.avatar-preview-container:hover .edit-overlay {
+    opacity: 1;
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    padding: 16px;
+    text-align: center;
+}
+
+.upload-text {
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.song-upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.upload-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: #fafafa;
+    border-radius: 6px;
+    border: 1px solid #f0f0f0;
+}
+
+.file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.success-icon {
+    color: #52c41a;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.reset-btn {
+    width: 150px;
+}
+
+.submit-btn {
+    width: 150px;
+}
+
+@media (max-width: 768px) {
+    .avatar-uploader {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .reset-btn,
+    .submit-btn {
+        width: 100%;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}

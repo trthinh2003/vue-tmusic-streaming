@@ -1,0 +1,119 @@
+<template>
+  <div class="lyric-comment-container">
+    <!-- Phần header với tabs -->
+    <a-tabs v-model:activeKey="activeTab" class="header-tabs">
+      <a-tab-pane key="lyric">
+        <template #tab>
+          <span class="custom-tab">
+            <Icon icon="mdi:music-note" />
+            <span>Lời bài hát</span>
+          </span>
+        </template>
+        <LyricDisplay 
+          v-if="currentLyric" 
+          :lyrics="currentLyric" 
+          :current-time="currentAudioTime"
+          :karaoke-mode="karaokeMode"
+          @seek="handleSeek"
+        />
+        <a-empty v-else description="Không có lời bài hát" />
+      </a-tab-pane>
+      
+      
+      <a-tab-pane key="comments">
+        <template #tab>
+          <span class="custom-tab">
+            <Icon icon="mdi:comment-text-outline" />
+            <span>Bình luận</span>
+          </span>
+        </template>
+        <CommentSection 
+          :song-id="currentSong.id"
+          :current-user="currentUser"
+        />
+      </a-tab-pane>
+    </a-tabs>
+  </div>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue';
+import { Icon } from '@iconify/vue';
+import LyricDisplay from '@/components/client/lyrics/LyricDisplay.vue';
+import CommentSection from '@/components/client/lyrics/CommentSection.vue';
+import { useProfileStore } from '@/stores/useProfile';
+
+const props = defineProps({
+  currentLyric: String,
+  currentAudioTime: Number,
+  currentSong: Object,
+  karaokeMode: Boolean
+});
+
+const emit = defineEmits(['seek-lyric']);
+
+const activeTab = ref('lyric');
+const currentUser = ref({});
+
+currentUser.value = useProfileStore().getProfile();
+
+// const handleKaraokeToggle = (checked) => {
+//   console.log('Karaoke mode:', checked);
+// };
+watch(() => props.karaokeMode, (newVal) => {
+  // console.log('karaokeMode changed:', newVal);
+});
+
+const handleSeek = (time) => {
+  emit('seek-lyric', time);
+};
+</script>
+
+<style scoped>
+:deep(.ant-tabs .ant-tabs-tab-btn) {
+    color: #fff;
+}
+
+.lyric-comment-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-tabs {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-tabs-nav) {
+  margin: 0;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  background: rgba(26, 26, 46, 0.9);
+  z-index: 1;
+}
+
+:deep(.ant-tabs-content) {
+  flex: 1;
+  overflow: auto;
+}
+
+:deep(.ant-tabs-content) {
+  overflow-y: scroll;
+  height: 100%;
+}
+
+.custom-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-tab .iconify {
+  font-size: 16px;
+  margin-right: 4px;
+}
+</style>

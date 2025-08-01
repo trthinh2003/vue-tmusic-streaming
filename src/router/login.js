@@ -5,6 +5,11 @@ const login = [
         name: 'login',
         meta: {},
     },
+    {
+        path: '/auth/callback',
+        name: 'social-auth-callback',
+        component: () => import('@/layouts/client/socialAuth.vue')
+    }
 ]
 
 export default login;

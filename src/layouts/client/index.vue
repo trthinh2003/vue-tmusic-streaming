@@ -1,25 +1,44 @@
 <template>
-  <div class="music-app d-flex flex-column flex-sm-row">
+  <div class="music-app d-flex flex-column flex-sm-row" :style="{ backgroundImage: `url(${currentBackground})` }">
     <!-- Phần header mobile -->
     <div class="mobile-header d-flex d-sm-none align-items-center justify-content-between p-3">
-      <a-button type="text" @click="showDrawer">
-        <i class="fa-solid fa-bars"></i>
-      </a-button>
-      <div class="ms-4">
+      <div class="d-flex align-items-center">
+        <a-button type="text" @click="showDrawer" class="menu-btn">
+          <i class="fa-solid fa-bars"></i>
+        </a-button>
+      </div>
+
+      <div class="ms-0 me-2">
         <i class="fa-solid fa-music me-1"></i>
         <p class="d-inline"><span class="text-white">TMusic</span>Streaming</p>
       </div>
-      <a-button 
-        type="text" 
-        class="logout-btn"
-        @click="handleLogout"
-        style="text-align: end;"
-      >
-        <template #icon>
-          <i class="fa-solid fa-right-from-bracket me-1"></i>
+      
+      <!-- Avatar mobile -->
+      <a-dropdown :trigger="['click']" placement="bottomRight">
+        <a-avatar 
+          :size="36" 
+          :src="currentUser.avatar || adminLogo" 
+          class="cursor-pointer"
+        />
+        
+        <template #overlay>
+          <a-menu>
+            <a-menu-item key="profile" @click="openProfileModal">
+              <i class="fa-solid fa-user me-2 text-white"></i>
+              <span class="text-white">Hồ sơ</span>
+            </a-menu-item>
+            <a-menu-item key="settings">
+              <i class="fa-solid fa-gear me-2 text-white"></i>
+              <span class="text-white">Cài đặt</span>
+            </a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="logout" @click="handleLogout">
+              <i class="fa-solid fa-right-from-bracket me-2 text-white"></i>
+              <span class="text-white">Đăng xuất</span>
+            </a-menu-item>
+          </a-menu>
         </template>
-        <span>Đăng xuất</span>
-      </a-button>
+      </a-dropdown>
     </div>
 
     <!-- Drawer cho mobile -->
@@ -30,6 +49,20 @@
       :width="300"
       :body-style="{ padding: 0 }"
     >
+      <template #title>
+        <div class="drawer-header-container">
+          <span></span>
+          <a-button 
+            type="text" 
+            @click="openExploreModal"
+            class="explore-drawer-btn"
+          >
+            <Icon icon="mdi:compass-outline" />
+            <span class="explore-text d-inline">Khám phá</span>
+          </a-button>
+        </div>
+      </template>
+
       <div class="sidebar h-100">
         <h1><span class="text-white">TMusic</span>Streaming</h1>
         <div class="search p-3">
@@ -39,22 +72,46 @@
             @search="handleSearch"
           />
         </div>
+
         <div class="advance-filter d-flex align-items-center justify-content-center">
           <a-button 
             type="text" 
             class="advance-filter-btn p-1"
             style="background-color: #444; width: 50%;"
-            @click="visibleModalFilter = true"
+            @click="openFilterModal"
           >
             <template #icon>
               <i class="fa-solid fa-filter me-1"></i> Lọc nâng cao
             </template>
           </a-button>
         </div>
+        <!-- Filter tags cho desktop -->
+        <div class="filter-tags" v-if="hasActiveFilters">
+          <template v-for="(value, key) in activeFilters" :key="key">
+            <a-tag
+              v-if="value && (Array.isArray(value) ? value.length : true)"
+              closable
+              @close="removeFilter(key)"
+              class="mx-1 my-1"
+            >
+              {{ getFilterLabel(key) }}: {{ 
+                Array.isArray(value) ? 
+                $truncateWords(value.join(', '), 5) : 
+                $truncateWords(value, 5) 
+              }}
+            </a-tag>
+          </template>
+        </div>
+
         <playlist 
           :songs="filteredSongs" 
           :current-song="currentSong"
+          :available-playlists="playlists"
+          :current-playlist-id="currentPlaylistId"
           @select-song="selectSong"
+          @change-playlist="handleChangePlaylist"
+          @open-modal="showModal = true"
+          @open-favorite-modal="handleOpenFavoriteModal"
         />
       </div>
     </a-drawer>
@@ -75,9 +132,9 @@
       <div class="advance-filter d-flex align-items-center justify-content-center">
         <a-button 
           type="text" 
-          class="advance-filter-btn p-1 w-75"
-          style="background-color: #444;"
-          @click="visibleModalFilter = true"
+          class="advance-filter-btn p-1"
+          style="background-color: #444; width: 50%;"
+          @click="openFilterModal"
         >
           <template #icon>
             <i class="fa-solid fa-filter me-1"></i> Lọc nâng cao
@@ -85,235 +142,497 @@
         </a-button>
       </div>
 
-      <div class="filter-container">
-        <a-modal v-model:open="visibleModalFilter" title="Bộ lọc bài hát" class="dark-modal" @ok="applyFilter">
-          <a-form layout="vertical">
-            <a-form-item label="Tên bài hát">
-              <a-input v-model:value="filters.songName" placeholder="Nhập tên bài hát" />
-            </a-form-item>
-            <a-form-item label="Tên nghệ sĩ">
-              <a-input v-model:value="filters.artistName" placeholder="Nhập tên nghệ sĩ" />
-            </a-form-item>
-            <a-form-item label="Thể loại">
-              <a-select v-model:value="filters.genre" placeholder="Chọn thể loại" allowClear>
-                <a-select-option value="pop">Pop</a-select-option>
-                <a-select-option value="rock">Rock</a-select-option>
-                <a-select-option value="jazz">Jazz</a-select-option>
-                <a-select-option value="hiphop">Hip Hop</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-form>
-          <template #footer>
-            <a-button class="close-button" @click="visible = false">Đóng</a-button>
-            <a-button type="primary" class="apply-button" @click="applyFilter">Áp dụng</a-button>
-          </template>
-        </a-modal>
+      <!-- Filter tags cho desktop -->
+      <div class="filter-tags" v-if="hasActiveFilters">
+        <template v-for="(value, key) in activeFilters" :key="key">
+          <a-tag
+            v-if="value && (Array.isArray(value) ? value.length : true)"
+            closable
+            @close="removeFilter(key)"
+            class="mx-1 my-1"
+          >
+            {{ getFilterLabel(key) }}: {{ 
+              Array.isArray(value) ? 
+              $truncateWords(value.join(', '), 5) : 
+              $truncateWords(value, 5) 
+            }}
+          </a-tag>
+        </template>
       </div>
 
       <playlist 
+        ref="playlistRef"
         :songs="filteredSongs" 
         :current-song="currentSong"
+        :available-playlists="playlists"
+        :current-playlist-id="currentPlaylistId"
         @select-song="selectSong"
+        @change-playlist="handleChangePlaylist"
+        @open-modal="showModal = true"
+        @open-favorite-modal="handleOpenFavoriteModal"
+        @clear-favorites="handleClearFavorites"
         class="d-none d-sm-block"
       />
     </div>
 
     <!-- Main content -->
     <div class="d-flex flex-column justify-content-center align-items-center w-100">
-      <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-4">
-        <h1><span class="text-white">TMusic</span>Streaming</h1>
+      <!-- Main header cho desktop -->
+      <div class="main-header d-none d-sm-flex flex-row justify-content-between align-items-center w-100 py-3 px-0">
+        <div class="d-flex align-items-center">
+          <h1><span class="text-white">TMusic</span>Streaming</h1>
+          <a-button 
+            type="text" 
+            class="tour-btn" 
+            @click="startTour"
+            style="margin-left: 8px;"
+          >
+            <i class="fa-solid fa-question" 
+              style="color: #fff; font-size: 14px; background-color: #444; padding: 7px; border-radius: 50%;">
+            </i>
+          </a-button>
+        </div>
+
         <a-button 
           type="text" 
-          class="logout-btn"
-          @click="handleLogout"
+          @click="openExploreModal"
+          class="explore-header-btn"
         >
-          <template #icon>
-            <i class="fa-solid fa-right-from-bracket me-1"></i>
-          </template>
-          <span>Đăng xuất</span>
+          <Icon icon="mdi:compass-outline" class="me-2" />
+          Khám phá
         </a-button>
+
+        <a-dropdown :trigger="['click']" placement="bottomRight">
+          <div class="user-avatar">
+            <a-avatar 
+              :size="40" 
+              :src="currentUser.avatar || adminLogo" 
+              class="cursor-pointer"
+            />
+            <span class="username ms-2">{{ currentUser.username }}</span>
+            <i class="fa-solid fa-chevron-down ms-2"></i>
+          </div>
+          
+          <template #overlay>
+            <a-menu>
+              <a-menu-item key="profile" @click="openProfileModal">
+                <i class="fa-solid fa-user me-2 text-white"></i>
+                <span class="text-white">Hồ sơ</span>
+              </a-menu-item>
+              <a-menu-item key="settings">
+                <i class="fa-solid fa-gear me-2 text-white"></i>
+                <span class="text-white">Cài đặt</span>
+              </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item key="logout" @click="handleLogout">
+                <i class="fa-solid fa-right-from-bracket me-2 text-white"></i>
+                <span class="text-white">Đăng xuất</span>
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
       </div>
       <div class="main-content">
         <player 
+          v-if="currentSong"
+          ref="playerRef"
           :current-song="currentSong"
+          :is-favorite="currentSong.isFavorite"
           :is-playing="isPlaying"
-          :playlist="filteredSongs"
+          :playlist="songs"
           @toggle-play="togglePlay"
-          @next-song="nextSong"
-          @prev-song="prevSong"
+          @next-song="nextSongHandler"
+          @prev-song="prevSongHandler"
           @update-shuffle="handleShuffleUpdate"
+          @timeupdate="updateAudioTime"
+          @favorite-updated="handleFavoriteUpdate"
+          :is-shuffled="isShuffled"
         />
       </div>
     </div>
   </div>
+  <FilterModal 
+    v-model="visibleFilterModal"
+    v-model:filters="filters"
+    @apply-filter="applyFilter"
+    @clear-filters="clearAllFilters"
+    @update:filters="updateFilters"
+  />
+  <ExploreModal 
+    v-model="visibleExploreModal"
+    @update:modelValue="visibleExploreModal = false"
+    @pause-play="handlePausePlay"
+  />
+  <a-button type="text" class="toggle-sidebar-btn me-2" @click="toggleRightDrawer">
+    <i class="fa-solid fa-angle-left"></i>
+  </a-button>
+  <a-drawer 
+    class="lyric-drawer-right" 
+    :width="drawerLyricWidth"
+    title="Lời bài hát & Bình luận"
+    placement="right" 
+    :header-style="{ background: 'rgba(26, 26, 46, 0.9)' }"
+    :open="openRightDrawer" 
+    @close="onCloseRightDrawer"
+    :style="{ 
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${currentBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        width: '100%',
+        marginLeft: 'auto',
+        zIndex: '1000'
+      }"
+  >
+    <template #extra>
+      <div style="margin-right: 8px;">
+        <a-switch
+          v-model:checked="karaokeMode"
+          checked-children="Karaoke"
+          un-checked-children="Thường"
+          @change="handleKaraokeToggle"
+        />
+      </div> 
+    </template>
+    <LyricWithComments
+      :current-lyric="currentLyric"
+      :current-audio-time="currentAudioTime"
+      :current-song="currentSong"
+      :karaoke-mode="karaokeMode"
+      @seek-lyric="handleSeek"
+    />
+  </a-drawer>
+  <div class="song-detail-trigger" @click="toggleSongDetail">
+    <i class="fa-solid fa-chevron-up"></i>
+  </div>
+
+  <SongDetailDrawer v-if="currentSong"
+    v-model:open="openSongDetail"
+    :current-song="currentSong"
+    :same-artist-songs="sameArtistSongs"
+    :suggested-songs="suggestedSongs"
+    :is-favorite="isFavorite"
+    :background-image="tmusicbackground2"
+    @toggle-favorite="toggleFavorite"
+    @select-song="selectSong"
+    @play-song="playSong"
+    @show-share-modal="showShareModal"
+    @toggle-right-drawer="toggleRightDrawer"
+  />
+  <PlayListModal
+    :open="showModal"
+    @update:open="showModal = $event"
+    :available-playlists="playlists"
+    :current-playlist="currentPlaylist"
+    @change-playlist="handlePlaylistChange"
+    @play-playlist="handlePlayPlaylist"
+    @refresh="fetchPlaylists"
+    @close="showModal = false"
+  />
+  <FavoriteModal
+    :open="showFavoriteModal"
+    @update:open="showFavoriteModal = $event"
+    @play-favorites="handlePlayFavorites"
+    @close="handleCloseFavoriteModal"
+  />
+  <ShareQRModal
+    v-model:open="shareModalVisible"
+    :song="currentSong"
+  />
+  <ProfileModal
+    :open="showProfileModal"
+    @update:open="showProfileModal = $event"
+    @profile-updated="handleProfileUpdated"
+  />
+  <a-tour 
+    v-model:open="tourVisible" 
+    :steps="steps" 
+    :current="currentStep"
+    @change="(current) => currentStep = current"
+    @close="closeTour"
+    @finish="closeTour"
+    type="primary"
+    :arrow="{ pointAtCenter: true }"
+  >
+    <template #indicatorsRender="{ current, total }">
+      <span>{{ current + 1 }} / {{ total }}</span>
+    </template>
+  </a-tour>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
+
+// Components
 import Playlist from '@/components/client/Playlist.vue'
 import Player from '@/components/client/Player.vue'
-import { Button, Drawer, Input } from 'ant-design-vue'
-import axiosInstance from '@/configs/axios'
-import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import PlayListModal from '@/components/client/modals/PlayListModal.vue'
+import ExploreModal from '@/components/client/modals/ExploreModal.vue'
+import LyricWithComments from '@/components/client/lyrics/LyricWithComments.vue'
+import FavoriteModal from '@/components/client/modals/FavoriteModal.vue'
+import FilterModal from '@/components/client/modals/FilterModal.vue'
+import SongDetailDrawer from '@/components/client/SongDetailDrawer.vue'
+import ShareQRModal from '@/components/client/modals/ShareQRModal.vue'
+import ProfileModal from '@/components/client/modals/ProfileModal.vue'
 
-// Import các file assets
-import cover1 from '@/assets/client/covers/cover1.jpg'
-import cover2 from '@/assets/client/covers/cover2.jpg'
-import cover3 from '@/assets/client/covers/cover3.jpg'
-import cover4 from '@/assets/client/covers/cover4.jpg'
-import cover5 from '@/assets/client/covers/cover5.jpg'
-import song1 from '@/assets/client/songs/song1.mp3'
-import song2 from '@/assets/client/songs/song2.mp3'
-import song3 from '@/assets/client/songs/song3.mp3'
-import song4 from '@/assets/client/songs/song4.mp3'
-import song5 from '@/assets/client/songs/song5.mp3'
+// UI Components
+import { Button, Drawer, Input, Tour } from 'ant-design-vue'
+import { Icon } from '@iconify/vue'
 
-const originalPlaylist = [
-  { id: 1, title: "Bài hát 1", artist: "Nghệ sĩ A", cover: cover1, audio: song1, duration: '2:01' },
-  { id: 2, title: "Bài hát 2", artist: "Nghệ sĩ B", cover: cover2, audio: song2, duration: '3:50' },
-  { id: 3, title: "Bài hát 3", artist: "Nghệ sĩ C", cover: cover3, audio: song3, duration: '3:49' },
-  { id: 4, title: "Bài hát 4", artist: "Nghệ sĩ D", cover: cover4, audio: song4, duration: '1:48' },
-  { id: 5, title: "Bài hát 5", artist: "Nghệ sĩ E", cover: cover5, audio: song5, duration: '4:32' }
-]
+// Composables
+import { usePlayer } from '@/composables/Main/usePlayer'
+import { usePlaylist } from '@/composables/Main/usePlaylist'
+import { useFilters } from '@/composables/Main/useFilters'
+import { useModals } from '@/composables/Main/useModals'
+import { useFavorites } from '@/composables/Main/useFavorites'
+import { useSongRecommendations } from '@/composables/Main/useSongRecommendations'
+import { useTour } from '@/composables/Main/useTour'
 
-const songs = ref([...originalPlaylist])
-const currentSong = ref(songs.value[0])
-const isPlaying = ref(false)
-const isShuffled = ref(false)
-const visible = ref(false) // State điều khiển Drawer
-const showMobileSearch = ref(false) // State hiển thị thanh tìm kiếm mobile
-const searchQuery = ref('') // Từ khóa tìm kiếm
-const router = useRouter()
-const visibleModalFilter = ref(false);
-const filters = ref({ songName: '', artistName: '', genre: '' });
+// Stores
+import { useProfileStore } from '@/stores/useProfile.js'
 
-const applyFilter = () => {
-  console.log('Áp dụng bộ lọc:', filters.value);
-  visibleModalFilter.value = false;
-};
+// Assets
+import tmusicbackground2 from '@/assets/img/tmusic_bg2.jpg'
+import adminLogo from '@/assets/img/admin-logo.png'
 
-// Lọc bài hát theo từ khóa
-const filteredSongs = computed(() => {
-  if (!searchQuery.value) return songs.value
-  const query = searchQuery.value.toLowerCase()
-  return songs.value.filter(song => 
-    song.title.toLowerCase().includes(query) || 
-    song.artist.toLowerCase().includes(query)
-  )
+// Initialize composables
+const {
+  currentSong,
+  currentAudioTime,
+  currentLyric,
+  karaokeMode,
+  playerRef,
+  isPlaying,
+  selectSong,
+  togglePlay,
+  handlePausePlay,
+  updateAudioTime,
+  handleSeek,
+  handleKaraokeToggle
+} = usePlayer()
+
+const {
+  originalPlaylist,
+  songs,
+  playlists,
+  currentPlaylistId,
+  isShuffled,
+  playlistRef,
+  currentPlaylist,
+  getSongsFromServer,
+  fetchPlaylists,
+  handleShuffleUpdate,
+  nextSong,
+  prevSong,
+  handlePlayPlaylist,
+  handlePlayFavorites,
+  handleClearFavorites,
+  handleChangePlaylist,
+  handlePlaylistChange
+} = usePlaylist(currentSong, isPlaying)
+
+const {
+  searchQuery,
+  filters,
+  visibleFilterModal,
+  hasActiveFilters,
+  activeFilters,
+  filteredSongs,
+  openFilterModal,
+  applyFilter,
+  clearAllFilters,
+  removeFilter,
+  getFilterLabel,
+  updateFilters,
+  handleSearch
+} = useFilters(originalPlaylist, songs, currentSong)
+
+const {
+  visible,
+  showModal,
+  showFavoriteModal,
+  shareModalVisible,
+  showProfileModal,
+  visibleExploreModal,
+  openSongDetail,
+  openRightDrawer,
+  showRightDrawer,
+  drawerLyricWidth,
+  showMobileSearch,
+  showDrawer,
+  toggleRightDrawer,
+  onCloseRightDrawer,
+  openExploreModal,
+  handleOpenFavoriteModal,
+  handleCloseFavoriteModal,
+  openProfileModal,
+  showShareModal,
+  toggleSongDetail,
+  handleLogout,
+  handleProfileUpdated,
+  updateDrawerWidth
+} = useModals()
+
+const {
+  isFavorite,
+  handleFavoriteUpdate,
+  toggleFavorite,
+  initializeFavorites
+} = useFavorites(songs, currentSong)
+
+const {
+  sameArtistSongs,
+  suggestedSongs,
+  fetchSameArtistSongs,
+  fetchRecommendedSongs
+} = useSongRecommendations(currentSong, openSongDetail)
+
+const {
+  tourVisible,
+  currentStep,
+  steps,
+  startTour,
+  nextStep,
+  prevStep,
+  closeTour
+} = useTour()
+
+// Local state
+const currentUser = ref({})
+
+const currentBackground = computed(() => {
+  return currentSong.value?.background || 'linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%)'
 })
 
-const showDrawer = () => {
-  visible.value = true
-}
-
-// Xử lý tìm kiếm
-const handleSearch = () => {
-  // Đã được xử lý tự động thông qua computed filteredSongs
-  if (showMobileSearch.value) {
-    showMobileSearch.value = false // Đóng thanh tìm kiếm mobile sau khi search
-  }
-}
-
-// Xáo trộn playlist
-const shufflePlaylist = () => {
-  const shuffled = [...originalPlaylist]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  songs.value = shuffled
-  
-  // Đảm bảo bài hát hiện tại vẫn trong playlist
-  if (!shuffled.some(song => song.id === currentSong.value.id)) {
-    currentSong.value = shuffled[0]
-  }
-}
-
-// Khôi phục playlist gốc
-const restorePlaylist = () => {
-  songs.value = [...originalPlaylist]
-}
-
-// Xử lý khi bật/tắt shuffle
-const handleShuffleUpdate = (shuffleStatus) => {
-  isShuffled.value = shuffleStatus
-  if (shuffleStatus) {
-    shufflePlaylist()
-  } else {
-    restorePlaylist()
-  }
-}
-
-// Chọn bài hát
-const selectSong = (song) => {
-  currentSong.value = song
-  isPlaying.value = true
-  visible.value = false // Đóng Drawer khi chọn bài hát trên mobile
-}
-
-// Play/Pause
-const togglePlay = () => {
-  isPlaying.value = !isPlaying.value
-}
-
-// Bài tiếp theo
-const nextSong = () => {
-  const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id)
-  const nextIndex = (currentIndex + 1) % filteredSongs.value.length
-  currentSong.value = filteredSongs.value[nextIndex]
-  isPlaying.value = true
-}
-
-// Bài trước đó
-const prevSong = () => {
-  const currentIndex = filteredSongs.value.findIndex(song => song.id === currentSong.value.id)
-  const prevIndex = (currentIndex - 1 + filteredSongs.value.length) % filteredSongs.value.length
-  currentSong.value = filteredSongs.value[prevIndex]
-  isPlaying.value = true
-}
-
-// Khởi tạo
-onMounted(() => {
-  currentSong.value = songs.value[0]
-})
-
-// Theo dõi thay đổi shuffle
-watch(isShuffled, (newVal) => {
-  if (newVal) {
-    shufflePlaylist()
-  } else {
-    restorePlaylist()
-  }
-})
-
-// Đăng xuất 
-const handleLogout = async () => {
+const playSong = (song) => {
   try {
-    const response = await axiosInstance.get('/auth/logout');
-    if (response.status === 200) {
-      message.success(response.data.message);
-      setTimeout(() => {
-        router.push({ name: 'login' });
-      }, 1000);
+    if (!song) {
+      console.warn('playSong called with invalid song:', song)
+      return
+    }
+    selectSong(song)
+  } catch (error) {
+    console.error('Error in playSong:', error)
+  }
+}
+
+const nextSongHandler = () => {
+  try {
+    console.log('nextSongHandler called')
+    console.log('Current filteredSongs:', filteredSongs.value)
+    console.log('Current song:', currentSong.value)
+    
+    if (!filteredSongs.value || filteredSongs.value.length === 0) {
+      console.warn('No filtered songs available')
+      return
+    }
+    
+    nextSong(filteredSongs.value)
+  } catch (error) {
+    console.error('Error in nextSongHandler:', error)
+  }
+}
+
+const prevSongHandler = () => {
+  try {
+    console.log('prevSongHandler called')
+    console.log('Current filteredSongs:', filteredSongs.value)
+    console.log('Current song:', currentSong.value)
+    
+    if (!filteredSongs.value || filteredSongs.value.length === 0) {
+      console.warn('No filtered songs available')
+      return
+    }
+    
+    prevSong(filteredSongs.value)
+  } catch (error) {
+    console.error('Error in prevSongHandler:', error)
+  }
+}
+
+// Profile handling
+const handleProfileUpdatedLocal = (updatedUser) => {
+  try {
+    const result = handleProfileUpdated(updatedUser)
+    currentUser.value = useProfileStore().getProfile()
+    return result
+  } catch (error) {
+    console.error('Error in handleProfileUpdatedLocal:', error)
+  }
+}
+
+// Lifecycle hooks
+onMounted(async () => {
+  try {
+    currentUser.value = useProfileStore().getProfile()
+    
+    updateDrawerWidth()
+    window.addEventListener('resize', updateDrawerWidth)
+    
+    await getSongsFromServer()
+    await fetchPlaylists()
+    await initializeFavorites()
+    await fetchRecommendedSongs()
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+  }
+})
+
+onBeforeUnmount(() => {
+  try {
+    window.removeEventListener('resize', updateDrawerWidth)
+  } catch (error) {
+    console.error('Error in onBeforeUnmount:', error)
+  }
+})
+
+// Watchers
+watch(isShuffled, (newVal) => {
+  try {
+    if (newVal) {
+      handleShuffleUpdate(true)
+    } else {
+      handleShuffleUpdate(false)
     }
   } catch (error) {
-    message.error("Đã có lỗi xảy ra!");
+    console.error('Error in isShuffled watch:', error)
   }
-}
+})
+
+watch(originalPlaylist, (newVal) => {
+  try {
+    if (newVal && newVal.length > 0) {
+      songs.value = [...newVal]
+      if (!currentSong.value) {
+        currentSong.value = newVal[0]
+      }
+    }
+  } catch (error) {
+    console.error('Error in originalPlaylist watch:', error)
+  }
+}, { deep: true })
+
+watch(() => visible.value, (newVal) => {
+  try {
+    if (!newVal && currentSong.value) {
+    }
+  } catch (error) {
+    console.error('Error in visible watch:', error)
+  }
+})
 </script>
 
 <style>
 :root {
-  --primary-color: #4361ee;       /* Màu chủ đạo - xanh dương */
-  --secondary-color: #3a0ca3;    /* Màu phụ - tím đậm */
-  --accent-color: #4cc9f0;       /* Màu nhấn - xanh sáng */
-  --dark-bg: #1a1a2e;           /* Nền tối */
-  --light-bg: #f8f9fa;          /* Nền sáng */
-  --text-light: #f8f9fa;        /* Chữ trên nền tối */
-  --text-dark: #212529;         /* Chữ trên nền sáng */
-  --card-bg: #16213e;           /* Nền card */
-  --hover-effect: rgba(255, 255, 255, 0.1); /* Hiệu ứng hover */
+  --primary-color: #4361ee;      
+  --secondary-color: #3a0ca3;    
+  --accent-color: #4cc9f0;      
+  --dark-bg: #1a1a2e;           
+  --light-bg: #f8f9fa;          
+  --text-light: #f8f9fa;        
+  --text-dark: #212529;         
+  --card-bg: #16213e;           
+  --hover-effect: rgba(255, 255, 255, 0.1); 
 }
 
 #app {
@@ -323,17 +642,38 @@ const handleLogout = async () => {
   height: 100vh;
   background: linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%);
   color: var(--text-light);
+  overflow: hidden;
 }
 
 .music-app {
   display: flex;
   height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.5s ease-in-out;
+  position: relative;
+}
+
+.music-app::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(26, 26, 46, 0.8);
+  z-index: 0;
+}
+
+.sidebar, .main-content, .mobile-header, .main-header {
+  position: relative;
+  z-index: 1;
 }
 
 /* Sidebar Styles */
 .sidebar {
-  width: 300px;
+  width: 310px;
   background: rgba(26, 26, 46, 0.9);
   backdrop-filter: blur(10px);
   color: var(--text-light);
@@ -351,58 +691,63 @@ const handleLogout = async () => {
   text-align: center;
 }
 
-/* Filter Modal */
-.filter-container {
+/* Togge Sidebar Styles */
+.toggle-sidebar-btn {
+  position: fixed;
+  top: 50%;
+  right: -8px;
+  z-index: 1000;
+  min-width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  background: rgba(26, 26, 46, 0.9);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 10px;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
 }
 
-.filter-button {
-  background-color: #1f1f1f;
+.toggle-sidebar-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: white;
+  transform: translateY(-2px) scale(1.05);
+}
+
+.ant-drawer .ant-drawer-title {
+  color: var(--text-light);
+}
+
+.ant-drawer .ant-drawer-close {
+  color: var(--text-light);
+}
+
+.ant-drawer .ant-drawer-content {
+  background: rgba(26, 26, 46, 0.9);
+}
+
+/* Filter Tags */
+.filter-tags {
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 8px;
+  margin: 2px;
+}
+
+.ant-tag {
+  background: var(--primary-color);
+  color: white;
   border: none;
-  color: #fff;
-  transition: background 0.3s;
 }
 
-.filter-button:hover {
-  background-color: #333;
-}
-
-.dark-modal :deep(.ant-modal-content) {
-  background: #1e1e1e;
+.ant-tag-close-icon {
   color: white;
-}
-
-.dark-modal :deep(.ant-modal-header) {
-  background: #252525;
-  border-bottom: 1px solid #444;
-  color: white;
-}
-
-.dark-modal :deep(.ant-modal-footer) {
-  background: #252525;
-  border-top: 1px solid #444;
-}
-
-.close-button {
-  background: #444;
-  border: none;
-  color: white;
-}
-
-.close-button:hover {
-  background: #666;
-}
-
-.apply-button {
-  background: #007bff;
-  border: none;
-  color: white;
-}
-
-.apply-button:hover {
-  background: #0056b3;
+  margin-left: 4px;
 }
 
 /* Search Input */
@@ -410,15 +755,6 @@ const handleLogout = async () => {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.ant-input-search .ant-input {
-  background: transparent;
-  color: var(--text-light);
-}
-
-.ant-input-search .ant-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
 }
 
 .ant-input-search-button {
@@ -464,7 +800,7 @@ const handleLogout = async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(26, 26, 46, 0.6) 0%, rgba(15, 52, 96, 0.6) 100%);
+  /* background: linear-gradient(135deg, rgba(26, 26, 46, 0.6) 0%, rgba(15, 52, 96, 0.6) 100%); */
 }
 
 .main-header {
@@ -506,6 +842,11 @@ const handleLogout = async () => {
   color: var(--text-light);
 }
 
+.ant-drawer .ant-drawer-body {
+  overflow: hidden;
+  padding: 0;
+}
+
 /* Button Styles */
 .ant-btn {
   transition: all 0.3s ease;
@@ -515,7 +856,131 @@ const handleLogout = async () => {
   transform: translateY(-2px);
 }
 
-/* Responsive Adjustments */
+</style>
+
+<style scoped>
+/* User dropdown styles */
+.user-avatar {
+  display: flex;
+  margin-right: 5px;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.username {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Dropdown menu styles */
+.ant-dropdown-menu {
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.ant-dropdown-menu-item {
+  color: var(--text-light);
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.ant-dropdown-menu-item-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Main header padding */
+.main-header {
+  padding: 0.8rem 2rem;
+}
+
+.ant-input-search .ant-input {
+  background: transparent;
+  color: #f8f9fa;
+}
+
+/* Nút khám phá trên header desktop */
+.explore-header-btn {
+  color: var(--accent-color);
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 4px 12px;
+  transition: all 0.3s ease;
+}
+
+.explore-header-btn:hover {
+  background: rgba(67, 97, 238, 0.1);
+  color: var(--accent-color);
+}
+
+.explore-header-btn .iconify {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+/* Container cho header drawer */
+.drawer-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-right: 8px;
+}
+
+/* Nút khám phá trong drawer */
+.explore-drawer-btn {
+  color: var(--accent-color);
+  padding: 0 8px;
+  height: auto;
+}
+
+.explore-drawer-btn .iconify {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+.explore-text {
+  margin-left: 4px;
+  font-size: 14px;
+}
+
+:deep(.ant-tabs-content) {
+  overflow: hidden;
+}
+
+/* Ẩn text trên mobile nhỏ */
+@media (max-width: 375px) {
+  .explore-text {
+    display: none;
+  }
+}
+
+/* Điều chỉnh header drawer */
+:deep(.ant-drawer-header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 12px;
+  background: rgba(26, 26, 46, 0.9);
+}
+
+:deep(.ant-drawer-title) {
+  width: 100%;
+}
+
+/* Responsive cho mobile */
 @media (max-width: 576px) {
   .music-app {
     flex-direction: column;
@@ -549,5 +1014,87 @@ const handleLogout = async () => {
     border-color: var(--primary-color);
     color: white;
   }
+}
+</style>
+
+<style scoped>
+.song-detail-trigger {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.song-detail-trigger:hover {
+  transform: translateY(-3px);
+  background: var(--secondary-color);
+}
+</style>
+
+<style scoped>
+/* CSS cho help button */
+.help-btn {
+  margin-left: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  transition: all 0.3s;
+}
+
+.help-btn:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+</style>
+
+<style scoped>
+.tour-btn {
+  transition: all 0.3s;
+}
+
+.tour-btn:hover {
+  color: var(--accent-color);
+  transform: scale(1.1);
+}
+
+:deep(.ant-tour) {
+  width: 250px !important; 
+  max-width: 90vw;
+}
+
+:deep(.ant-tour-content) {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+:deep(.ant-tour-title) {
+  color: var(--accent-color);
+}
+
+:deep(.ant-tour-description) {
+  color: #eee;
+}
+
+:deep(.ant-tour-next-btn) {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+:deep(.ant-tour-prev-btn) {
+  color: #eee;
+}
+
+:deep(.ant-tour-indicator) {
+  background: var(--accent-color);
 }
 </style>

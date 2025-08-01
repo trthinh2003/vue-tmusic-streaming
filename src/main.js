@@ -13,7 +13,30 @@ import {
     Select,
     Tag,
     Col,
-    Row
+    Row,
+    DatePicker,
+    Tabs,
+    Menu,
+    Dropdown,
+    Upload,
+    Popconfirm,
+    Tooltip,
+    Avatar,
+    Empty,
+    Comment,
+    Switch,
+    Carousel,
+    Pagination,
+    List,
+    Slider,
+    AutoComplete,
+    Checkbox,
+    Divider,
+    Alert,
+    Radio,
+    Tour,
+    Descriptions,
+    Space
 } from 'ant-design-vue';
 
 import App from './App.vue'
@@ -42,7 +65,33 @@ app.use(Select)
 app.use(Tag)
 app.use(Col)
 app.use(Row)
+app.use(DatePicker)
+app.use(Tabs)
+app.use(Menu)
+app.use(Dropdown)
+app.use(Upload)
+app.use(Popconfirm)
+app.use(Tooltip)
+app.use(Avatar)
+app.use(Empty)
+app.use(Comment)
+app.use(Switch)
+app.use(Carousel)
+app.use(Pagination)
+app.use(List)
+app.use(Slider)
+app.use(AutoComplete)
+app.use(Checkbox)
+app.use(Divider)
+app.use(Alert)
+app.use(Radio)
+app.use(Tour)
+app.use(Descriptions)
+app.use(Space)
 app.use(formatDate)
 app.use(truncateWords)
+app.use({
+    install(app) {}
+})
 app.use(router)
 app.mount('#app')

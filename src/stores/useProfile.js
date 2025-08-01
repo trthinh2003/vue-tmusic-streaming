@@ -8,6 +8,9 @@ export const useProfileStore = defineStore("profile", {
         setProfile(profile) {
             this.profile = profile;
         },
+        getProfile() {
+            return this.profile;
+        },
         clearProfile() {
             this.profile = {};
         },

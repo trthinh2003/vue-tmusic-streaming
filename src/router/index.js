@@ -1,12 +1,18 @@
 import { createRouter, createWebHistory } from "vue-router";
 import login from "./login";
+import register from "./register";
 import admin from "./admin";
 import client from "./client";
 import { getProfile } from "@/services/authService";
 import { useProfileStore } from "@/stores/useProfile.js";
 import Swal from "sweetalert2";
 
-const routes = [...login, ...admin, ...client];
+const routes = [
+  ...login, 
+  ...register,
+  ...admin, 
+  ...client
+];
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
@@ -26,40 +32,43 @@ router.beforeEach(async (to, from, next) => {
   }
 
   try {
-    if (!profileStore.profile || !profileStore.profile.id) {
-      await getProfile();
+    await getProfile();
+    
+    // Kiểm tra quyền truy cập theo role
+    const userRole = profileStore.profile.role;
+    if (to.meta.roles && !to.meta.roles.includes(userRole)) {
+      return next({ path: "/" });
     }
+    
+    next();
+    
   } catch (error) {
     console.error("Lỗi khi lấy profile:", error);
-  }
-
-  // Nếu Unauthorized, hiển thị cảnh báo & chuyển về login
-  if (profileStore.profile.message === "Unauthorized") {
-    if (!Swal.isVisible()) {
-      await Swal.fire({
-        title: "Phiên đăng nhập đã hết hạn!",
-        text: "Vui lòng đăng nhập lại.",
-        icon: "warning",
-        confirmButtonText: "OK",
-      });
+    
+    // unauthorized, redirect về login
+    if (error.response?.status === 401) {
+      if (!Swal.isVisible()) {
+        await Swal.fire({
+          title: "Phiên đăng nhập đã hết hạn!",
+          text: "Vui lòng đăng nhập lại.",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
+      }
+      return next({ name: "login" });
     }
-
-    return next({ name: "login" });
+    
+    next();
   }
-
-  // Kiểm tra quyền truy cập theo role
-  const userRole = profileStore.profile.role; // role có thể là "admin", "employee", "customer"...
-  if (to.meta.roles && !to.meta.roles.includes(userRole)) {
-    // await Swal.fire({
-    //   title: "Bạn không có quyền truy cập!",
-    //   text: "Vui lòng liên hệ quản trị viên.",
-    //   icon: "error",
-    //   confirmButtonText: "OK",
-    // });
-    return next({ path: "/" }); // Điều hướng về trang chính hoặc trang lỗi
-  }
-
-  next();
 });
+// router.afterEach((to, from) => {
+//   const routesNeedReload = ['/dashboard', '/explore']
+
+//   if (routesNeedReload.includes(to.path)) {
+//     setTimeout(() => {
+//       window.location.reload()
+//     }, 100)
+//   }
+// })
 
 export default router;

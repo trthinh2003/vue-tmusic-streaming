@@ -72,7 +72,7 @@
         </div>
 
         <div class="login-footer">
-            <!-- <p>Đôi khi, Server sẽ phản hồi chậm (do chính sách từ Render), hãy chờ và thử reload trang nếu gặp lỗi nhé</p> -->
+            <p>Đôi khi, Server sẽ phản hồi chậm (do chính sách từ Render), hãy chờ và thử reload trang nếu gặp lỗi nhé</p>
             <p>©2025 TMusicStreaming. Bản quyền thuộc về Công ty TMusic.</p>
         </div>
     </div>

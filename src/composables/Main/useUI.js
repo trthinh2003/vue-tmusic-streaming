@@ -4,13 +4,11 @@ import { useProfileStore } from '@/stores/useProfile.js'
 export function useUI() {
   const currentUser = ref({})
   const drawerLyricWidth = ref('50vw')
-  
-  // Background management
   const currentBackground = computed(() => {
     return (song) => song?.background || 'linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%)'
   })
 
-  // Responsive drawer width management
+  // Responsive drawer
   const updateDrawerWidth = () => {
     const width = window.innerWidth
     if (width < 576) drawerLyricWidth.value = '90vw'       // Mobile

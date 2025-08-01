@@ -42,23 +42,36 @@ src/
 
 > Below are some example screenshots of the TMusicStreaming frontend interface:
 
-![Home Page](./screenshots/home.png)  
-*Home screen showcasing featured songs and genres.*
+<div align="center">
+  <img src="./screenshots/home.png" alt="Home Page" />
+  <p><em>Home screen showcasing featured songs and genres.</em></p>
+</div>
 
-![Explore Modal](./screenshots/explore.png)  
-*Modal for discovering songs, artists, playlists, and albums.*
+<div align="center">
+  <img src="./screenshots/explore.png" alt="Explore Modal" />
+  <p><em>Modal for discovering songs, artists, playlists, and albums.</em></p>
+</div>
 
-![Playlist Management](./screenshots/playlist.png)  
-*Manage personal playlists and add favorite songs.*
+<div align="center">
+  <img src="./screenshots/playlist.png" alt="Playlist Management" />
+  <p><em>Manage personal playlists and add favorite songs.</em></p>
+</div>
 
-![Admin Dashboard](./screenshots/admin-dashboard.png)  
-*Overview of the admin dashboard.*
+<div align="center">
+  <img src="./screenshots/admin-dashboard.png" alt="Admin Dashboard" />
+  <p><em>Overview of the admin dashboard.</em></p>
+</div>
 
-![Admin Songs](./screenshots/admin-song.png)  
-*Admin interface for managing songs.*
+<div align="center">
+  <img src="./screenshots/admin-song.png" alt="Admin Songs" />
+  <p><em>Admin interface for managing songs.</em></p>
+</div>
 
-![Admin Add And Test](./screenshots/add-song.png)  
-*Form to add new songs and test preview song.*
+<div align="center">
+  <img src="./screenshots/add-song.png" alt="Admin Add And Test" />
+  <p><em>Form to add new songs and test preview song.</em></p>
+</div>
+
 
 ---
 

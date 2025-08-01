@@ -122,9 +122,9 @@ All API requests are handled through the `services/` directory, with Axios confi
 
 Example usage:
 ```js
-import api from '@/services/api'
+import getSongs from '@/services/getSongs'
 
-api.get('/songs') // Fetch list of songs
+getSongs() // Fetch list of songs
 ```
 
 ---

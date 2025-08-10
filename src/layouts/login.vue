@@ -41,7 +41,7 @@
                 <p class="text-dark">Chưa có tài khoản? <router-link :to="{ name: 'register' }">Đăng ký</router-link></p>
             </div>
 
-            <div class="social-login">
+            <!-- <div class="social-login">
                 <p>Hoặc đăng nhập bằng</p>
                 <div class="social-icons">
                     <button 
@@ -68,7 +68,7 @@
                         <i class="fab fa-apple"></i>
                     </button>
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <div class="login-footer">
@@ -115,28 +115,28 @@ const handleLogin = handleSubmit(async (values) => {
     }
 });
 
-const handleSocialLogin = async (platform) => {
-    try {
-        socialLoading.value = platform;
+// const handleSocialLogin = async (platform) => {
+//     try {
+//         socialLoading.value = platform;
         
-        let user;
-        if (platform === 'google') {
-            user = await loginWithGoogle();
-        } else if (platform === 'facebook') {
-            user = await loginWithFacebook();
-        }
+//         let user;
+//         if (platform === 'google') {
+//             user = await loginWithGoogle();
+//         } else if (platform === 'facebook') {
+//             user = await loginWithFacebook();
+//         }
         
-        if (user) {
-            message.success('Đăng nhập thành công!');
-            await nextGo(user.role === 'User' ? 'client' : 'admin-dashboards');
-        }
-    } catch (error) {
-        console.error(`${platform} login error:`, error);
-        message.error(`Đăng nhập bằng ${platform} thất bại: ${error.message}`);
-    } finally {
-        socialLoading.value = null;
-    }
-};
+//         if (user) {
+//             message.success('Đăng nhập thành công!');
+//             await nextGo(user.role === 'User' ? 'client' : 'admin-dashboards');
+//         }
+//     } catch (error) {
+//         console.error(`${platform} login error:`, error);
+//         message.error(`Đăng nhập bằng ${platform} thất bại: ${error.message}`);
+//     } finally {
+//         socialLoading.value = null;
+//     }
+// };
 
 const nextGo = async (name) => {
     const hide = message.loading('Đang chuyển trang...', 5000);

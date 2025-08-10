@@ -55,9 +55,9 @@ const admin = [
         meta: { title: "Bình luận", requiresAuth: true, roles: "Admin" },
       },
       {
-        path: "/admin/playlists",
-        name: "admin-playlists",
-        component: () => import("@/pages/admin/playlists/index.vue"),
+        path: "/admin/evaluations",
+        name: "admin-evaluations",
+        component: () => import("@/pages/admin/evaluations/index.vue"),
         meta: { title: "Playlist", requiresAuth: true, roles: "Admin" },
       },
       {
